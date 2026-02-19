@@ -3,6 +3,7 @@ package domain
 class Linketinder {
     static List<Candidato> listaCandidatos = []
     static List<Empresa> listaEmpresas = []
+    static List<Curtida> listaCurtidas = []
 
     static void main(String[] args) {
         inicializarInformacoes()
@@ -13,7 +14,12 @@ class Linketinder {
             println "2. LISTAR TODOS OS CANDIDATOS"
             println "3. CADASTRAR NOVO CANDIDATO"
             println "4. CADASTRAR NOVA EMPRESA"
-            println "5. SAIR"
+            println "5. CURTIR EMPRESA"
+            println "6. CURTIR CANDIDATO"
+            println "7. LISTAR CANDIDATOS INTERESSADOS EM UMA EMPRESA"
+            println "8. LISTAR EMPRESAS INTERESSADAS EM UM CANDIDATO(anonimo)"
+            println "9. LISTAR MATCHES"
+            println "10. SAIR"
             print "Escolha uma opção: "
             String escolha = System.in.newReader().readLine()
 
@@ -31,6 +37,21 @@ class Linketinder {
                     cadastrarEmpresa()
                     break
                 case "5":
+                    curtirEmpresa()
+                    break
+                case "6":
+                    curtirCandidato()
+                    break
+                case "7":
+                    verCurtidasNaEmpresa()
+                    break
+                case "8":
+                    verCurtidasNoCandidato()
+                    break
+                case "9":
+                    listarMatches()
+                    break
+                case "10":
                     executarPrograma = false
                     println "Saindo do programa. Até mais!"
                     break
@@ -39,6 +60,126 @@ class Linketinder {
             }
         }
     }
+
+    static void listarMatches() {
+        def matches = listaCurtidas.findAll { it.isMatch() }
+
+        if (!matches) {
+            println "Ainda não ocorreu nenhum match no sistema."
+            return
+        }
+        matches.each { match ->
+            println "MATCH: A empresa ${match.empresa.nome} e o(a) candidato(a) ${match.candidato.nome} deram match!"
+            println "   📧 Contacto do Candidato: ${match.candidato.email}"
+            println "   📧 Contacto da Empresa: ${match.empresa.email}\n"
+        }
+    }
+
+    static void verCurtidasNaEmpresa() {
+        println "Qual o nome da sua empresa"
+        String nomeEmpresa = System.in.newReader().readLine()
+
+        Empresa empresa = listaEmpresas.find { it.nome.equalsIgnoreCase(nomeEmpresa) }
+
+        if (!empresa) {
+            println "Empresa não encontrada!"
+            return
+        }
+        def curtidasRecebidas = listaCurtidas.findAll { it.empresa == empresa && it.candCurtiu }
+
+        if (curtidasRecebidas.isEmpty()) {
+            println "Sua empresa não recebeu curtidas"
+            return
+        }
+        println "===== CANDIDATOS QUE CURTIRAM A ${empresa.nome.toUpperCase()} ======="
+        println "Modo de Recrutamento às Cegas ativado: Exibindo apenas competências."
+
+        curtidasRecebidas.eachWithIndex { curtida, index ->
+            Candidato candidato = curtida.candidato
+            println "Candidato Anônimo #${index + 1}"
+            println "Habilidades: ${candidato.habilidades.join(', ')}"
+            println "Descrição: ${candidato.descricao}\n"
+        }
+    }
+
+    static void verCurtidasNoCandidato() {
+        println "Nome Candidato: "
+        String nome = System.in.newReader().readLine()
+
+        Candidato candidato = listaCandidatos.find { it.nome.equalsIgnoreCase(nome) }
+
+        if (!candidato) {
+            println "Candidato não encontrado!"
+            return
+        }
+        def curtidasRecebidas = listaCurtidas.findAll { it.candidato == candidato && it.empCurtiu }
+        if (!curtidasRecebidas) {
+            println "Você ainda não recebeu curtidas de empresas."
+            return
+        }
+        println "\n=== EMPRESAS DE OLHO EM VOCÊ, ${candidato.nome.toUpperCase()} ==="
+        curtidasRecebidas.each { curtida ->
+            println curtida.empresa
+        }
+    }
+
+    static void curtirEmpresa() {
+        imprimirEmpresas()
+        println("Digite o número da empresa que deseja curtir: ")
+        int numeroEmpresa = System.in.newReader().readLine().toInteger()
+        if (numeroEmpresa < 1 || numeroEmpresa > listaEmpresas.size()) {
+            println "Número de empresa inválido. Operação cancelada."
+            return
+        }
+        Empresa empresa = listaEmpresas[numeroEmpresa - 1]
+        println "Nome do Candidato que curtiu a empresa: "
+        String nomeCandidato = System.in.newReader().readLine()
+        Candidato candidato = listaCandidatos.find { it.nome.equalsIgnoreCase(nomeCandidato) }
+        if (!candidato) {
+            println "Candidato não encontrado. Verifique o nome e tente novamente."
+            return
+        }
+        Curtida curtida = listaCurtidas.find { it.candidato == candidato && it.empresa == empresa }
+        if (!curtida) {
+            curtida = new Curtida(candidato, empresa)
+            listaCurtidas << curtida
+        }
+        curtida.candCurtiu = true
+        println "Empresa curtida com sucesso!"
+        if (curtida.isMatch()) {
+            println "Parabéns! Você tem um match com a empresa ${empresa.nome}!"
+        }
+
+    }
+
+    static void curtirCandidato() {
+        imprimirCandidatos()
+        println("Digite o número do candidato que deseja curtir: ")
+        int numeroCandidato = System.in.newReader().readLine().toInteger()
+        if (numeroCandidato < 1 || numeroCandidato > listaCandidatos.size()) {
+            println "Número de candidato inválido. Tente novamente."
+            return
+        }
+        Candidato candidato = listaCandidatos[numeroCandidato - 1]
+        println "Nome da Empresa que curtiu o candidato: "
+        String nomeEmpresa = System.in.newReader().readLine()
+        Empresa empresa = listaEmpresas.find { it.nome.equalsIgnoreCase(nomeEmpresa) }
+        if (!empresa) {
+            println "Empresa não encontrada."
+            return
+        }
+        Curtida curtida = listaCurtidas.find { it.candidato == candidato && it.empresa == empresa }
+        if (!curtida) {
+            curtida = new Curtida(candidato, empresa)
+            listaCurtidas << curtida
+        }
+        curtida.empCurtiu = true
+        println "Candidato curtido com sucesso!"
+        if (curtida.isMatch()) {
+            println "Parabéns! Você tem um match com o candidato ${candidato.nome}!"
+        }
+    }
+
 
     static void imprimirEmpresas() {
         println "\n=== EMPRESAS ==="
