@@ -118,8 +118,12 @@ class Linketinder {
             return
         }
         println "\n=== EMPRESAS DE OLHO EM VOCÊ, ${candidato.nome.toUpperCase()} ==="
-        curtidasRecebidas.each { curtida ->
-            println curtida.empresa
+        println "Modo de Recrutamento às Cegas ativado"
+        curtidasRecebidas.eachWithIndex { curtida, index ->
+            println "Empresa anonima#${index + 1}"
+            println "${curtida.empresa.habilidades.join(",")}"
+            println "${curtida.empresa.descricao}"
+            println "${curtida.empresa.estado}"
         }
     }
 
@@ -220,7 +224,7 @@ class Linketinder {
                 descricao: descricao,
                 habilidades: habilidades)
 
-        listaCandidatos << novoCandidato
+        adicionarCandidato(novoCandidato)
         println "Candidato cadastrado com sucesso!"
     }
 
@@ -253,8 +257,13 @@ class Linketinder {
                 descricao: descricao,
                 habilidades: habilidades
         )
-        listaEmpresas << novaEmpresa
+
+        adicionarEmpresa(novaEmpresa)
         println "Empresa Cadastada com sucesso!"
+    }
+
+    static void adicionarEmpresa(Empresa empresa) {
+        listaEmpresas << empresa
     }
 
     static void inicializarInformacoes() {
@@ -344,5 +353,9 @@ class Linketinder {
                 cep: "80000-000",
                 descricao: "Buscamos desenvolvedores Java com experiência em Docker.",
                 habilidades: ["Java", "Docker"])
+    }
+
+    static def void adicionarCandidato(Candidato candidato) {
+        listaCandidatos << candidato
     }
 }
