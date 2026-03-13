@@ -27,3 +27,7 @@ O sistema roda via terminal e atende aos seguintes requisitos e expansões:
 ### Pré-requisitos
 * Ter o **JDK** (Java Development Kit) instalado.
 * Ter o **Groovy** instalado e configurado nas variáveis de ambiente do seu sistema.
+
+## ✍️ Autor
+
+**Fernando Santos** 🚀
