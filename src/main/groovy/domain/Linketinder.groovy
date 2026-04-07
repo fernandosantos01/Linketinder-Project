@@ -228,6 +228,16 @@ class Linketinder {
         println "Candidato cadastrado com sucesso!"
     }
 
+    static def void alterarInformacoesCandidato(String nomeCandidato, Candidato candidatoAlteracoes) {
+        def candidato = listaCandidatos.find { it.nome.equalsIgnoreCase(nomeCandidato) }
+        if (!candidato) {
+            println "Candidato Inexistente"
+            return
+        }
+        adicionarCandidato(candidatoAlteracoes)
+        listaCandidatos.remove(candidato)
+    }
+
     static void cadastrarEmpresa() {
         println "=====CADASTRAR NOVA EMPRESA======="
         println "Nome: "

@@ -1,5 +1,3 @@
-package test
-
 import domain.Candidato
 import domain.Curtida
 import domain.Empresa
@@ -11,6 +9,7 @@ class TestLinketinder extends Specification {
         Linketinder.listaCandidatos.clear()
         Linketinder.listaEmpresas.clear()
         Linketinder.listaCurtidas.clear()
+        Linketinder.listaCandidatos.clear();
     }
 
     def "deve adicionar um candidato na lista"() {
@@ -94,5 +93,19 @@ class TestLinketinder extends Specification {
 
         then: "o match deve ocorrer"
         curtida.isMatch()
+    }
+
+    def "deve testar a funcionalidade editar candidato"() {
+        given: "instanciar o candidato"
+        def candidato = new Candidato(nome: "Teste")
+        def nomeCandidato = "Teste";
+        def alteracoesCandidato = new Candidato(nome: "Teste2");
+        Linketinder.adicionarCandidato(candidato)
+
+        when: "o metodo alterar informações de candidato deve ser chamado"
+        Linketinder.alterarInformacoesCandidato(nomeCandidato, alteracoesCandidato)
+
+        then: "validar se ocorreu a mudança de nome"
+        Linketinder.listaCandidatos.get(0).nome == "Teste2"
     }
 }
