@@ -1,20 +1,31 @@
 package domain
 
 import groovy.transform.ToString
+import java.time.LocalDate
+import java.time.Period
 
 @ToString(includeNames = true)
 class Candidato extends Pessoa {
     String cpf
-    int idade;
+    LocalDate dataNascimento
+
+    int getIdade() {
+        if (dataNascimento) {
+            return Period.between(dataNascimento, LocalDate.now()).years
+        }
+        return 0
+    }
 
     @Override
     String toString() {
         return """
         ------------------------------------------
-        CANDIDATO: $nome ($idade anos)
+        ID: {$id}
+        CANDIDATO: $nome (${getIdade()} anos)
         Email: $email | CPF: $cpf
-        Local: $estado - CEP: $cep
-        Competências: ${habilidades.join(', ')}
+        Data de Nascimento: ${dataNascimento?.format('dd/MM/yyyy') ?: 'Não informada'}
+        Local: $pais - $estado - CEP: $cep
+        Competências: ${habilidades.join(', ') ?: 'Nenhuma'}
         Sobre: $descricao
         ------------------------------------------"""
     }

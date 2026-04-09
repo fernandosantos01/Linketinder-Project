@@ -1,6 +1,6 @@
 plugins {
     id 'groovy'
-    id 'application' // Opcional: use se o seu projeto for um app executável
+    id 'application'
 }
 
 group = 'com.linketinder'
@@ -13,19 +13,15 @@ repositories {
 }
 
 dependencies {
-    // Esta é a forma correta de usar o groovy-all na versão 4+: como uma plataforma (BOM)
     implementation platform('org.apache.groovy:groovy-all:4.0.0')
 
-    // Agora você adiciona o que realmente vai usar (sem precisar colocar a versão, pois o BOM já cuida disso)
     implementation 'org.apache.groovy:groovy'
-    implementation 'org.apache.groovy:groovy-json' // útil para o Linketinder
+    implementation 'org.apache.groovy:groovy-json'
+    implementation 'org.postgresql:postgresql:42.7.2'
 
-    // Para o Spock, a mesma lógica:
     testImplementation platform('org.spockframework:spock-bom:2.3-groovy-4.0')
     testImplementation 'org.spockframework:spock-core'
 }
-
-// O Spock 2.0+ exige que o JUnit Platform execute os testes
 test {
     useJUnitPlatform()
 }
