@@ -1,33 +1,60 @@
-# 🔥 Linketinder - ZG-Hero Project (MVP)
+# Linketinder (MVP) - ZG-Hero
 
-Bem-vindo ao repositório do **Linketinder**, um projeto desenvolvido em **Groovy** como parte dos desafios do programa de aceleração ZG-Hero.
+Projeto backend em **Groovy** para simular um sistema de recrutamento no estilo "match", com execução via terminal e persistência em banco de dados.
 
-A ideia do sistema nasceu de uma necessidade do empresário Dr. Antônio Paçoca: criar uma plataforma de contratação mais prática e efetiva que as opções atuais do mercado. O Linketinder combina o modelo de "Match" do Tinder com o foco em competências profissionais do LinkedIn, conectando empresas a candidatos com base em suas habilidades.
+## O que foi adicionado nos 3 ultimos commits
 
-## 🎯 Objetivo do Projeto
-Desenvolver o MVP (Produto Mínimo Viável) do backend de um sistema de recrutamento utilizando conceitos de **Programação Orientada a Objetos (POO)** e **Estruturas de Dados** na linguagem Groovy.
+- **`14c8142`**: atualização das classes de domínio para o contexto de banco e inclusão da entidade `Vaga`.
+- **`a8b0e4e`**: implementação de persistência com **JDBC puro** usando DAOs (`CandidatoDAO`, `EmpresaDAO`, `VagaDAO`, `CompetenciaDAO`) e classe de conexão (`DataBaseConnection`).
+- **`d83f5ac`**: refatoração do menu principal (`Linketinder.groovy`) para operar totalmente com dados persistidos no banco.
 
-## 🚀 Funcionalidades Implementadas
-O sistema roda via terminal e atende aos seguintes requisitos e expansões:
-* **Listagem de Candidatos:** Exibe uma lista com no mínimo 5 candidatos pré-cadastrados, incluindo dados pessoais e competências (ex: Java, Spring Boot, Groovy).
-* **Listagem de Empresas:** Exibe uma lista com no mínimo 5 empresas pré-cadastradas, incluindo dados corporativos e as competências esperadas dos candidatos.
-* **Cadastro de Novos Candidatos:** Permite inserir novos profissionais no sistema de forma dinâmica.
-* **Cadastro de Novas Empresas:** Permite inserir novas vagas corporativas.
-* **Sistema de Curtidas (Interação):** Candidatos podem curtir empresas de interesse, e empresas podem curtir perfis de candidatos.
-* **Recrutamento às Cegas (Blind Recruitment):** Empresas podem visualizar os candidatos interessados em suas vagas focando apenas em suas competências e descrições, mantendo os dados pessoais anônimos para evitar vieses inconscientes.
-* **Transparência para o Candidato:** Candidatos podem visualizar a lista completa das empresas que demonstraram interesse em seu perfil.
-* **Sistema de Matches:** Quando um candidato e uma empresa curtem um ao outro, o sistema gera um "Match", liberando as informações de contato (e-mail) para que ambas as partes possam se comunicar.
+## Funcionalidades atuais
 
-## 🛠️ Tecnologias Utilizadas
-* **Linguagem:** Groovy
-* **Conceitos:** Orientação a Objetos, Herança, POGOs (Plain Old Groovy Objects), AST Transformations (`@Canonical`), Coleções (Listas/Mapas) e Closures.
+- Listar empresas cadastradas no banco.
+- Listar candidatos e suas competências.
+- Cadastrar nova empresa.
+- Cadastrar novo candidato com competências (criando competências inexistentes quando necessário).
+- Publicar vaga vinculada a empresa e competências.
+- Listar vagas disponíveis com requisitos.
+- Exibir dicionário de competências cadastradas.
 
-## ⚙️ Como Executar o Projeto
+## Arquitetura
 
-### Pré-requisitos
-* Ter o **JDK** (Java Development Kit) instalado.
-* Ter o **Groovy** instalado e configurado nas variáveis de ambiente do seu sistema.
+- `src/main/groovy/domain`: entidades de domínio (`Pessoa`, `Candidato`, `Empresa`, `Vaga`).
+- `src/main/groovy/dao`: camada de acesso a dados via JDBC.
+- `src/main/groovy/util/DataBaseConnection.groovy`: fábrica de conexão com PostgreSQL.
+- `src/main/groovy/domain/Linketinder.groovy`: ponto de entrada da aplicação (menu interativo).
 
-## ✍️ Autor
+## Stack tecnica
 
-**Fernando Santos** 🚀
+- Groovy 4
+- Gradle (plugins `groovy` e `application`)
+- PostgreSQL (driver `org.postgresql:postgresql:42.7.2`)
+- Spock Framework para testes
+
+## Pre-requisitos
+
+- JDK instalado.
+- PostgreSQL em execução.
+- Banco `db_linketinder` criado.
+- Ajustar credenciais em `src/main/groovy/util/DataBaseConnection.groovy` se necessario.
+
+## Como executar
+
+```bash
+cd /home/fernando/IdeaProjects/LInLinketinder
+./gradlew run
+```
+
+## Como rodar testes
+
+```bash
+cd /home/fernando/IdeaProjects/LInLinketinder
+./gradlew test
+```
+
+> Observação: os testes em `src/test/groovy` usam integração com banco, então o schema/tabelas precisam existir previamente.
+
+## Autor
+
+**Fernando Santos**
