@@ -10,108 +10,130 @@ import java.sql.Date
 
 class CandidatoDAO {
     static List<Candidato> listarCandidatos() {
-        def lista = []
         String query = "SELECT * FROM candidatos"
+        List<Candidato> candidatos = []
 
-        try (Connection conn = DataBaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query);
-             ResultSet rs = stmt.executeQuery()) {
+        try (Connection conexao = DataBaseConnection.getConnection();
+             PreparedStatement statement = conexao.prepareStatement(query);
+             ResultSet resultSet = statement.executeQuery()) {
 
-            while (rs.next()) {
-                def candidato = new Candidato(
-                        id: rs.getInt("id"),
-                        nome: rs.getString("nome"),
-                        dataNascimento: rs.getDate("data_nascimento")?.toLocalDate(),
-                        email: rs.getString("email"),
-                        cpf: rs.getString("cpf"),
-                        pais: rs.getString("pais"),
-                        estado: rs.getString("estado"),
-                        cep: rs.getString("cep"),
-                        descricao: rs.getString("descricao")
-                )
-                candidato.habilidades = buscarHabilidades(candidato.id, conn)
-                lista << candidato
+            while (resultSet.next()) {
+                Candidato candidato = construirCandidatoDoResultSet(resultSet)
+                candidato.habilidades = buscarHabilidadesDocandidato(candidato.id, conexao)
+                candidatos << candidato
             }
-        } catch (Exception e) {
-            println "Erro ao listar candidatos: ${e.message}"
+        } catch (Exception erro) {
+            println "Erro ao listar candidatos: ${erro.message}"
         }
-        return lista
+        return candidatos
     }
 
-    private static List<String> buscarHabilidades(Integer candidatoId, Connection conn) {
-        def habs = []
+    static void salvarCandidato(Candidato candidato) {
+        validarDadosDoCandidato(candidato)
+
+        String query = """
+            INSERT INTO candidatos (nome, data_nascimento, email, cpf, pais, estado, cep, descricao)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """
+
+        try (Connection conexao = DataBaseConnection.getConnection()) {
+            int novoIdCandidato = inserirCandidato(query, candidato, conexao)
+
+            if (novoIdCandidato > 0 && candidato.habilidades) {
+                vincularHabilidades(novoIdCandidato, candidato.habilidades, conexao)
+            }
+
+            println "Candidato '${candidato.nome}' salvo com sucesso!"
+
+        } catch (Exception erro) {
+            println "Erro ao salvar candidato: ${erro.message}"
+        }
+    }
+
+    private static int inserirCandidato(String query, Candidato candidato, Connection conexao) {
+        try (PreparedStatement statement = conexao.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, candidato.nome)
+            statement.setDate(2, Date.valueOf(candidato.dataNascimento))
+            statement.setString(3, candidato.email)
+            statement.setString(4, candidato.cpf)
+            statement.setString(5, candidato.pais)
+            statement.setString(6, candidato.estado)
+            statement.setString(7, candidato.cep)
+            statement.setString(8, candidato.descricao)
+
+            statement.executeUpdate()
+
+            try (ResultSet chaves = statement.getGeneratedKeys()) {
+                return chaves.next() ? chaves.getInt(1) : -1
+            }
+        } catch (Exception erro) {
+            throw new RuntimeException("Falha ao inserir candidato", erro)
+        }
+    }
+
+    private static void vincularHabilidades(int idCandidato, List<String> habilidades, Connection conexao) {
+        CompetenciaDAO competenciaDAO = new CompetenciaDAO()
+        String query = "INSERT INTO candidato_competencias (candidato_id, competencias_id) VALUES (?, ?)"
+
+        try (PreparedStatement statement = conexao.prepareStatement(query)) {
+            habilidades.each { nomeHabilidade ->
+                int idCompetencia = competenciaDAO.buscarOuCriarCompetencia(nomeHabilidade, conexao)
+                if (idCompetencia > 0) {
+                    statement.setInt(1, idCandidato)
+                    statement.setInt(2, idCompetencia)
+                    statement.executeUpdate()
+                }
+            }
+        } catch (Exception erro) {
+            println "Erro ao vincular habilidades: ${erro.message}"
+        }
+    }
+
+    private static void validarDadosDoCandidato(Candidato candidato) {
+        if (!candidato.nome?.trim()) {
+            throw new IllegalArgumentException("Nome do candidato é obrigatório")
+        }
+        if (!candidato.cpf?.trim()) {
+            throw new IllegalArgumentException("CPF é obrigatório")
+        }
+        if (!candidato.dataNascimento) {
+            throw new IllegalArgumentException("Data de nascimento é obrigatória")
+        }
+    }
+
+    private static List<String> buscarHabilidadesDocandidato(Integer idCandidato, Connection conexao) {
         String query = """
             SELECT c.nome 
             FROM competencias c
             JOIN candidato_competencias cc ON c.id = cc.competencias_id
             WHERE cc.candidato_id = ?
         """
+        List<String> habilidades = []
 
-        try (PreparedStatement stmt = conn.prepareStatement(query)) {
-            stmt.setInt(1, candidatoId)
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    habs << rs.getString("nome")
+        try (PreparedStatement statement = conexao.prepareStatement(query)) {
+            statement.setInt(1, idCandidato)
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    habilidades << resultSet.getString("nome")
                 }
             }
-        } catch (Exception e) {
-            println "Erro ao buscar habilidades do candidato: ${e.message}"
+        } catch (Exception erro) {
+            println "Erro ao buscar habilidades do candidato: ${erro.message}"
         }
-        return habs
+        return habilidades
     }
 
-    static void salvarCandidato(Candidato c) {
-        String queryCandidato = """
-            INSERT INTO candidatos (nome, data_nascimento, email, cpf, pais, estado, cep, descricao)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """
-
-        try (Connection conn = DataBaseConnection.getConnection()) {
-
-            PreparedStatement stmtCand = conn.prepareStatement(queryCandidato, Statement.RETURN_GENERATED_KEYS)
-            stmtCand.setString(1, c.nome)
-            stmtCand.setDate(2, Date.valueOf(c.dataNascimento))
-            stmtCand.setString(3, c.email)
-            stmtCand.setString(4, c.cpf)
-            stmtCand.setString(5, c.pais)
-            stmtCand.setString(6, c.estado)
-            stmtCand.setString(7, c.cep)
-            stmtCand.setString(8, c.descricao)
-
-            stmtCand.executeUpdate()
-
-            ResultSet rsKeys = stmtCand.getGeneratedKeys()
-            int candidatoIdGerado = 0
-            if (rsKeys.next()) {
-                candidatoIdGerado = rsKeys.getInt(1)
-            }
-            stmtCand.close()
-
-            if (candidatoIdGerado > 0 && c.habilidades != null && !c.habilidades.isEmpty()) {
-
-                def compDAO = new CompetenciaDAO()
-
-                String queryInsertCandComp = "INSERT INTO candidato_competencias (candidato_id, competencias_id) VALUES (?, ?)"
-
-                try (PreparedStatement stmtInsert = conn.prepareStatement(queryInsertCandComp)) {
-                    c.habilidades.each { nomeHab ->
-
-                        int compId = compDAO.buscarOuCriarCompetencia(nomeHab, conn)
-
-                        if (compId > 0) {
-                            stmtInsert.setInt(1, candidatoIdGerado)
-                            stmtInsert.setInt(2, compId)
-                            stmtInsert.executeUpdate()
-                        }
-                    }
-                }
-            }
-
-            println "Candidato '${c.nome}' salvo com sucesso!"
-
-        } catch (Exception e) {
-            println "Erro ao salvar candidato: ${e.message}"
-            e.printStackTrace()
-        }
+    private static Candidato construirCandidatoDoResultSet(ResultSet resultSet) {
+        return new Candidato(
+            id: resultSet.getInt("id"),
+            nome: resultSet.getString("nome"),
+            dataNascimento: resultSet.getDate("data_nascimento")?.toLocalDate(),
+            email: resultSet.getString("email"),
+            cpf: resultSet.getString("cpf"),
+            pais: resultSet.getString("pais"),
+            estado: resultSet.getString("estado"),
+            cep: resultSet.getString("cep"),
+            descricao: resultSet.getString("descricao")
+        )
     }
 }
