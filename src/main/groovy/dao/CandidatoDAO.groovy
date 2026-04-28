@@ -89,7 +89,7 @@ class CandidatoDAO {
 
             if (candidatoIdGerado > 0 && c.habilidades != null && !c.habilidades.isEmpty()) {
 
-                def compDAO = new dao.CompetenciaDAO()
+                def compDAO = new CompetenciaDAO()
 
                 String queryInsertCandComp = "INSERT INTO candidato_competencias (candidato_id, competencias_id) VALUES (?, ?)"
 
