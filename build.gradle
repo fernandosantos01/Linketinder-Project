@@ -3,7 +3,7 @@ plugins {
     id 'application'
 }
 application {
-    mainClass = 'domain.Linketinder'
+    mainClass = 'Linketinder'
 }
 
 run{
