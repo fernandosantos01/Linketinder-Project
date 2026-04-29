@@ -11,12 +11,12 @@ class CompetenciaDAO {
         def lista = []
         String query = "SELECT nome FROM competencias ORDER BY nome ASC"
 
-        try (Connection conn = DataBaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query);
-             ResultSet rs = stmt.executeQuery()) {
+        try (Connection conexao = DataBaseConnection.getConnection();
+             PreparedStatement stmt = conexao.prepareStatement(query);
+             ResultSet resultSet = stmt.executeQuery()) {
 
-            while (rs.next()) {
-                lista << rs.getString("nome")
+            while (resultSet.next()) {
+                lista << resultSet.getString("nome")
             }
         } catch (Exception e) {
             println "Erro ao listar competências: ${e.message}"
@@ -24,35 +24,35 @@ class CompetenciaDAO {
         return lista
     }
 
-    static int buscarOuCriarCompetencia(String nomeCompetencia, Connection conn) {
+    static int buscarOuCriarCompetencia(String nomeCompetencia, Connection conexao) {
         String nomeNormalizado = normalizarNomeCompetencia(nomeCompetencia)
-        int id = buscarCompetencia(nomeNormalizado, conn)
-        return id > 0 ? id : criarCompetencia(nomeCompetencia, conn)
+        int id = buscarCompetencia(nomeNormalizado, conexao)
+        return id > 0 ? id : criarCompetencia(nomeCompetencia, conexao)
     }
 
-    private static int buscarCompetencia(String nomeCompetencia, Connection conn) {
+    private static int buscarCompetencia(String nomeCompetencia, Connection conexao) {
         String query = "SELECT id FROM competencias WHERE nome = ?"
 
-        try (PreparedStatement statement = conn.prepareStatement(query)) {
+        try (PreparedStatement statement = conexao.prepareStatement(query)) {
             statement.setString(1, nomeCompetencia)
-            try (ResultSet rs = statement.executeQuery()) {
-                return rs.next() ? rs.getInt("id") : -1
+            try (ResultSet resultSet = statement.executeQuery()) {
+                return resultSet.next() ? resultSet.getInt("id") : -1
             }
         } catch (Exception e) {
             throw new RuntimeException("Erro ao buscar competência '${nomeCompetencia}'", e)
         }
     }
 
-    private static int criarCompetencia(String nomeCompetencia, Connection conn) {
+    private static int criarCompetencia(String nomeCompetencia, Connection conexao) {
         String query = """
         INSERT INTO competencias (nome) VALUES (?)
         """
-        try (PreparedStatement statement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement statement = conexao.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
             statement.setString(1, nomeCompetencia)
             statement.executeUpdate()
-            try (ResultSet rs = statement.getGeneratedKeys()) {
-                if (rs.next()) {
-                    return rs.getInt(1)
+            try (ResultSet resultSet = statement.getGeneratedKeys()) {
+                if (resultSet.next()) {
+                    return resultSet.getInt(1)
                 }
             }
         } catch (Exception erro) {
@@ -66,7 +66,7 @@ class CompetenciaDAO {
             String tabelaJuncao,
             String colunaEntidade,
             String colunaCompetencia,
-            Connection conn
+            Connection conexao
     ) {
         String query = """
             SELECT c.nome
@@ -78,11 +78,11 @@ class CompetenciaDAO {
 
         List<String> competencias = []
 
-        try (PreparedStatement smt = conn.prepareStatement(query)) {
-            smt.setInt(1, entidadeId)
-            try (ResultSet rs = smt.executeQuery()) {
-                while (rs.next()) {
-                    competencias << rs.getString("nome")
+        try (PreparedStatement statement = conexao.prepareStatement(query)) {
+            statement.setInt(1, entidadeId)
+            try (ResultSet resultSet = statement.executeQuery()) {
+                while (resultSet.next()) {
+                    competencias << resultSet.getString("nome")
                 }
             }
         } catch (Exception e) {
@@ -97,16 +97,16 @@ class CompetenciaDAO {
             String tabelaJuncao,
             String colunaEntidade,
             String colunaCompetencia,
-            Connection conn
+            Connection conexao
     ) {
         String query = """
         INSERT INTO ${tabelaJuncao}
         (${colunaEntidade}, ${colunaCompetencia})
         VALUES (?, ?)
         """
-        try (PreparedStatement statement = conn.prepareStatement(query)) {
+        try (PreparedStatement statement = conexao.prepareStatement(query)) {
             competencias.forEach { nomeCompetencia ->
-                int idCompetencia = buscarOuCriarCompetencia(nomeCompetencia, conn)
+                int idCompetencia = buscarOuCriarCompetencia(nomeCompetencia, conexao)
                 if (idCompetencia > 0) {
                     statement.setInt(1, entidadeId)
                     statement.setInt(2, idCompetencia)

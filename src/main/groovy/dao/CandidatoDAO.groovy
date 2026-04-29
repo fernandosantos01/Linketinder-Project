@@ -27,7 +27,7 @@ class CandidatoDAO {
                 candidatos << candidato
             }
         } catch (Exception erro) {
-            println "Erro ao listar candidatos: ${erro.message}"
+            throw new RuntimeException("Erro ao listar candidatos: ${erro.message}")
         }
         return candidatos
     }
@@ -47,10 +47,8 @@ class CandidatoDAO {
                 CompetenciaDAO.vincularCompetencias(novoIdCandidato, candidato.habilidades, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
             }
 
-            println "Candidato '${candidato.nome}' salvo com sucesso!"
-
         } catch (Exception erro) {
-            println "Erro ao salvar candidato: ${erro.message}"
+            throw new RuntimeException("Erro ao salvar candidato: ${erro.message}")
         }
     }
 
@@ -74,6 +72,7 @@ class CandidatoDAO {
             throw new RuntimeException("Falha ao inserir candidato", erro)
         }
     }
+
     private static void validarDadosDoCandidato(Candidato candidato) {
         if (!candidato.nome?.trim()) {
             throw new IllegalArgumentException("Nome do candidato é obrigatório")
@@ -85,6 +84,7 @@ class CandidatoDAO {
             throw new IllegalArgumentException("Data de nascimento é obrigatória")
         }
     }
+
     private static Candidato construirCandidatoDoResultSet(ResultSet resultSet) {
         return new Candidato(
                 id: resultSet.getInt("id"),
