@@ -26,7 +26,7 @@ class VagaDAO {
                 vagas << vaga
             }
         } catch (Exception erro) {
-            println "Erro ao listar vagas: ${erro.message}"
+            throw new RuntimeException("Erro ao listar vagas: ${erro.message}")
         }
         return vagas
     }
@@ -43,10 +43,8 @@ class VagaDAO {
                 CompetenciaDAO.vincularCompetencias(novoIdVaga, vaga.competencias, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
             }
 
-            println "Vaga '${vaga.nome}' salva com sucesso!"
-
         } catch (Exception erro) {
-            println "Erro ao salvar vaga: ${erro.message}"
+            throw new RuntimeException("Erro ao salvar vaga: ${erro.message}")
         }
     }
 

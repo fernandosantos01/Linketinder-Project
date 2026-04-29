@@ -69,7 +69,7 @@ class CandidatoDAO {
                 return chaves.next() ? chaves.getInt(1) : -1
             }
         } catch (Exception erro) {
-            throw new RuntimeException("Falha ao inserir candidato", erro)
+            throw new RuntimeException("Falha ao inserir candidato: ${erro}")
         }
     }
 

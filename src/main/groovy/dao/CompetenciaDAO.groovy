@@ -8,18 +8,18 @@ import java.sql.Statement
 
 class CompetenciaDAO {
     static List<String> listarCompetencias() {
-        def lista = []
+        List<String> lista = []
         String query = "SELECT nome FROM competencias ORDER BY nome ASC"
 
         try (Connection conexao = DataBaseConnection.getConnection();
-             PreparedStatement stmt = conexao.prepareStatement(query);
-             ResultSet resultSet = stmt.executeQuery()) {
+             PreparedStatement statement = conexao.prepareStatement(query);
+             ResultSet resultSet = statement.executeQuery()) {
 
             while (resultSet.next()) {
                 lista << resultSet.getString("nome")
             }
         } catch (Exception e) {
-            println "Erro ao listar competências: ${e.message}"
+            throw new RuntimeException("Erro ao listar competências: ${e.message}")
         }
         return lista
     }
@@ -27,7 +27,7 @@ class CompetenciaDAO {
     static int buscarOuCriarCompetencia(String nomeCompetencia, Connection conexao) {
         String nomeNormalizado = normalizarNomeCompetencia(nomeCompetencia)
         int id = buscarCompetencia(nomeNormalizado, conexao)
-        return id > 0 ? id : criarCompetencia(nomeCompetencia, conexao)
+        return id > 0 ? id : criarCompetencia(nomeNormalizado, conexao)
     }
 
     private static int buscarCompetencia(String nomeCompetencia, Connection conexao) {

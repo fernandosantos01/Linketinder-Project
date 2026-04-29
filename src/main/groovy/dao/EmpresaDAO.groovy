@@ -20,7 +20,7 @@ class EmpresaDAO {
                 empresas << construirEmpresaDoResultSet(resultSet)
             }
         } catch (Exception erro) {
-            println "Erro ao listar empresas: ${erro.message}"
+            throw new RuntimeException("Erro ao listar empresas: ${erro.message}")
         }
         return empresas
     }
@@ -38,10 +38,9 @@ class EmpresaDAO {
 
             preencherParametrosEmpresa(statement, empresa)
             statement.executeUpdate()
-            println "Empresa '${empresa.nome}' salva com sucesso!"
 
         } catch (Exception erro) {
-            println "Erro ao salvar empresa: ${erro.message}"
+            throw new RuntimeException("Erro ao salvar empresa: ${erro.message}")
         }
     }
 
