@@ -8,6 +8,9 @@ import java.sql.ResultSet
 import java.sql.Statement
 
 class VagaDAO {
+    private static final String TABELA_JUNCAO = "vaga_competencias"
+    private static final String COLUNA_ENTIDADE = "vaga_id"
+    private static final String COLUNA_COMPETENCIA = "competencia_id"
 
     static List<Vaga> listarVagas() {
         String query = "SELECT * FROM vagas"
@@ -19,7 +22,7 @@ class VagaDAO {
 
             while (resultSet.next()) {
                 Vaga vaga = construirVagaDoResultSet(resultSet)
-                vaga.competencias = buscarCompetenciasDaVaga(vaga.id, conexao)
+                vaga.competencias = CompetenciaDAO.buscarCompetenciasDe(vaga.id, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
                 vagas << vaga
             }
         } catch (Exception erro) {
@@ -37,7 +40,7 @@ class VagaDAO {
             int novoIdVaga = inserirVaga(query, vaga, conexao)
 
             if (novoIdVaga > 0 && vaga.competencias) {
-                vincularCompetenciasAVaga(novoIdVaga, vaga.competencias, conexao)
+                CompetenciaDAO.vincularCompetencias(novoIdVaga, vaga.competencias, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
             }
 
             println "Vaga '${vaga.nome}' salva com sucesso!"
@@ -64,24 +67,6 @@ class VagaDAO {
         }
     }
 
-    private static void vincularCompetenciasAVaga(int idVaga, List<String> competencias, Connection conexao) {
-        CompetenciaDAO competenciaDAO = new CompetenciaDAO()
-        String query = "INSERT INTO vaga_competencias (vaga_id, competencia_id) VALUES (?, ?)"
-
-        try (PreparedStatement statement = conexao.prepareStatement(query)) {
-            competencias.each { nomeCompetencia ->
-                int idCompetencia = competenciaDAO.buscarOuCriarCompetencia(nomeCompetencia, conexao)
-                if (idCompetencia > 0) {
-                    statement.setInt(1, idVaga)
-                    statement.setInt(2, idCompetencia)
-                    statement.executeUpdate()
-                }
-            }
-        } catch (Exception erro) {
-            println "Erro ao vincular competências à vaga: ${erro.message}"
-        }
-    }
-
     private static void validarDadosDaVaga(Vaga vaga) {
         if (!vaga.nome?.trim()) {
             throw new IllegalArgumentException("Nome da vaga é obrigatório")
@@ -91,35 +76,13 @@ class VagaDAO {
         }
     }
 
-    private static List<String> buscarCompetenciasDaVaga(Integer idVaga, Connection conexao) {
-        String query = """
-            SELECT c.nome 
-            FROM competencias c
-            JOIN vaga_competencias vc ON c.id = vc.competencia_id
-            WHERE vc.vaga_id = ?
-        """
-        List<String> competencias = []
-
-        try (PreparedStatement statement = conexao.prepareStatement(query)) {
-            statement.setInt(1, idVaga)
-            try (ResultSet resultSet = statement.executeQuery()) {
-                while (resultSet.next()) {
-                    competencias << resultSet.getString("nome")
-                }
-            }
-        } catch (Exception erro) {
-            println "Erro ao buscar competências da vaga: ${erro.message}"
-        }
-        return competencias
-    }
-
     private static Vaga construirVagaDoResultSet(ResultSet resultSet) {
         return new Vaga(
-            id: resultSet.getInt("id"),
-            nome: resultSet.getString("nome"),
-            descricao: resultSet.getString("descricao"),
-            local: resultSet.getString("local"),
-            empresaId: resultSet.getInt("empresa_id")
+                id: resultSet.getInt("id"),
+                nome: resultSet.getString("nome"),
+                descricao: resultSet.getString("descricao"),
+                local: resultSet.getString("local"),
+                empresaId: resultSet.getInt("empresa_id")
         )
     }
 }

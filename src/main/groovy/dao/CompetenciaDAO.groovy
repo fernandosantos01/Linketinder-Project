@@ -25,39 +25,100 @@ class CompetenciaDAO {
     }
 
     static int buscarOuCriarCompetencia(String nomeCompetencia, Connection conn) {
-        int id = -1
+        String nomeNormalizado = normalizarNomeCompetencia(nomeCompetencia)
+        int id = buscarCompetencia(nomeNormalizado, conn)
+        return id > 0 ? id : criarCompetencia(nomeCompetencia, conn)
+    }
 
-        String queryBusca = "SELECT id FROM competencias WHERE nome = ?"
-        try (PreparedStatement stmtBusca = conn.prepareStatement(queryBusca)) {
-            stmtBusca.setString(1, nomeCompetencia)
-            ResultSet rs = stmtBusca.executeQuery()
+    private static int buscarCompetencia(String nomeCompetencia, Connection conn) {
+        String query = "SELECT id FROM competencias WHERE nome = ?"
 
-            if (rs.next()) {
-                id = rs.getInt("id")
+        try (PreparedStatement statement = conn.prepareStatement(query)) {
+            statement.setString(1, nomeCompetencia)
+            try (ResultSet rs = statement.executeQuery()) {
+                return rs.next() ? rs.getInt("id") : -1
             }
-            rs.close()
         } catch (Exception e) {
-            println "Erro ao buscar competência '${nomeCompetencia}': ${e.message}"
+            throw new RuntimeException("Erro ao buscar competência '${nomeCompetencia}'", e)
         }
-        if (id > 0) {
-            return id
-        }
+    }
 
-        String queryInsert = "INSERT INTO competencias (nome) VALUES (?)"
-        try (PreparedStatement stmtInsert = conn.prepareStatement(queryInsert, Statement.RETURN_GENERATED_KEYS)) {
-            stmtInsert.setString(1, nomeCompetencia)
-            stmtInsert.executeUpdate()
-
-            ResultSet rsKeys = stmtInsert.getGeneratedKeys()
-            if (rsKeys.next()) {
-                id = rsKeys.getInt(1)
-                println "Nova competência '${nomeCompetencia}' cadastrada no sistema!"
+    private static int criarCompetencia(String nomeCompetencia, Connection conn) {
+        String query = """
+        INSERT INTO competencias (nome) VALUES (?)
+        """
+        try (PreparedStatement statement = conn.prepareStatement(query, Statement.RETURN_GENERATED_KEYS)) {
+            statement.setString(1, nomeCompetencia)
+            statement.executeUpdate()
+            try (ResultSet rs = statement.getGeneratedKeys()) {
+                if (rs.next()) {
+                    return rs.getInt(1)
+                }
             }
-            rsKeys.close()
-        } catch (Exception e) {
-            println "Erro ao criar nova competência '${nomeCompetencia}': ${e.message}"
+        } catch (Exception erro) {
+            throw new RuntimeException("Erro ao criar competencia '${nomeCompetencia}'", erro)
         }
+        return -1
+    }
 
-        return id
+    static List<String> buscarCompetenciasDe(
+            Integer entidadeId,
+            String tabelaJuncao,
+            String colunaEntidade,
+            String colunaCompetencia,
+            Connection conn
+    ) {
+        String query = """
+            SELECT c.nome
+            FROM competencias c
+            JOIN ${tabelaJuncao} j
+              ON c.id = j.${colunaCompetencia}
+            WHERE j.${colunaEntidade} = ?
+        """
+
+        List<String> competencias = []
+
+        try (PreparedStatement smt = conn.prepareStatement(query)) {
+            smt.setInt(1, entidadeId)
+            try (ResultSet rs = smt.executeQuery()) {
+                while (rs.next()) {
+                    competencias << rs.getString("nome")
+                }
+            }
+        } catch (Exception e) {
+            throw new RuntimeException("Erro ao buscar competências para entidade ID ${entidadeId} na tabela ${tabelaJuncao}", e)
+        }
+        return competencias
+    }
+
+    static void vincularCompetencias(
+            int entidadeId,
+            List<String> competencias,
+            String tabelaJuncao,
+            String colunaEntidade,
+            String colunaCompetencia,
+            Connection conn
+    ) {
+        String query = """
+        INSERT INTO ${tabelaJuncao}
+        (${colunaEntidade}, ${colunaCompetencia})
+        VALUES (?, ?)
+        """
+        try (PreparedStatement statement = conn.prepareStatement(query)) {
+            competencias.forEach { nomeCompetencia ->
+                int idCompetencia = buscarOuCriarCompetencia(nomeCompetencia, conn)
+                if (idCompetencia > 0) {
+                    statement.setInt(1, entidadeId)
+                    statement.setInt(2, idCompetencia)
+                    statement.executeUpdate()
+                }
+            }
+        } catch (Exception erro) {
+            throw new RuntimeException("Erro ao vincular competências para entidade ID ${entidadeId} na tabela ${tabelaJuncao}", erro)
+        }
+    }
+
+    private static String normalizarNomeCompetencia(String nome) {
+        return nome?.trim()?.toUpperCase() ?: ""
     }
 }

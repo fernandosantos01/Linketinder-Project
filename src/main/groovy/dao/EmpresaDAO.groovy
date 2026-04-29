@@ -8,7 +8,7 @@ import java.sql.ResultSet
 
 class EmpresaDAO {
 
-    List<Empresa> listarEmpresas() {
+    static List<Empresa> listarEmpresas() {
         String query = "SELECT * FROM empresas"
         List<Empresa> empresas = []
 
@@ -25,7 +25,7 @@ class EmpresaDAO {
         return empresas
     }
 
-    void salvarEmpresa(Empresa empresa) {
+    static void salvarEmpresa(Empresa empresa) {
         validarDadosDaEmpresa(empresa)
 
         String query = """
@@ -45,7 +45,7 @@ class EmpresaDAO {
         }
     }
 
-    private void validarDadosDaEmpresa(Empresa empresa) {
+    private static void validarDadosDaEmpresa(Empresa empresa) {
         if (!empresa.nome?.trim()) {
             throw new IllegalArgumentException("Nome da empresa é obrigatório")
         }
@@ -54,7 +54,7 @@ class EmpresaDAO {
         }
     }
 
-    private void preencherParametrosEmpresa(PreparedStatement statement, Empresa empresa) {
+    private static void preencherParametrosEmpresa(PreparedStatement statement, Empresa empresa) {
         statement.setString(1, empresa.nome)
         statement.setString(2, empresa.cnpj)
         statement.setString(3, empresa.email)
@@ -64,7 +64,7 @@ class EmpresaDAO {
         statement.setString(7, empresa.cep)
     }
 
-    private Empresa construirEmpresaDoResultSet(ResultSet resultSet) {
+    private static Empresa construirEmpresaDoResultSet(ResultSet resultSet) {
         return new Empresa(
             id: resultSet.getInt("id"),
             nome: resultSet.getString("nome"),
