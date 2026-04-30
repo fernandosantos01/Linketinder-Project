@@ -1,18 +1,27 @@
 package dao
 
 import domain.Vaga
+import repository.CompetenciaVinculoRepository
+import repository.VagaRepository
 import util.DataBaseConnection
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
 
-class VagaDAO {
+class VagaDAO implements VagaRepository {
     private static final String TABELA_JUNCAO = "vaga_competencias"
     private static final String COLUNA_ENTIDADE = "vaga_id"
     private static final String COLUNA_COMPETENCIA = "competencia_id"
 
-    static List<Vaga> listarVagas() {
+    private final CompetenciaVinculoRepository competenciaVinculoRepository
+
+    VagaDAO(CompetenciaVinculoRepository competenciaVinculoRepository) {
+        this.competenciaVinculoRepository = competenciaVinculoRepository
+    }
+
+    @Override
+    List<Vaga> listarVagas() {
         String query = "SELECT * FROM vagas"
         List<Vaga> vagas = []
 
@@ -22,7 +31,7 @@ class VagaDAO {
 
             while (resultSet.next()) {
                 Vaga vaga = construirVagaDoResultSet(resultSet)
-                vaga.competencias = CompetenciaDAO.buscarCompetenciasDe(vaga.id, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
+                vaga.competencias = competenciaVinculoRepository.buscarCompetenciasDe(vaga.id, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
                 vagas << vaga
             }
         } catch (Exception erro) {
@@ -31,8 +40,8 @@ class VagaDAO {
         return vagas
     }
 
-    static void salvarVaga(Vaga vaga) {
-        validarDadosDaVaga(vaga)
+    @Override
+    void salvarVaga(Vaga vaga) {
 
         String query = "INSERT INTO vagas (nome, descricao, local, empresa_id) VALUES (?, ?, ?, ?)"
 
@@ -40,7 +49,7 @@ class VagaDAO {
             int novoIdVaga = inserirVaga(query, vaga, conexao)
 
             if (novoIdVaga > 0 && vaga.competencias) {
-                CompetenciaDAO.vincularCompetencias(novoIdVaga, vaga.competencias, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
+                competenciaVinculoRepository.vincularCompetencias(novoIdVaga, vaga.competencias, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
             }
 
         } catch (Exception erro) {
@@ -62,15 +71,6 @@ class VagaDAO {
             }
         } catch (Exception erro) {
             throw new RuntimeException("Falha ao inserir vaga", erro)
-        }
-    }
-
-    private static void validarDadosDaVaga(Vaga vaga) {
-        if (!vaga.nome?.trim()) {
-            throw new IllegalArgumentException("Nome da vaga é obrigatório")
-        }
-        if (!vaga.empresaId || vaga.empresaId <= 0) {
-            throw new IllegalArgumentException("Vaga '${vaga.nome}' precisa de um ID de empresa válido")
         }
     }
 

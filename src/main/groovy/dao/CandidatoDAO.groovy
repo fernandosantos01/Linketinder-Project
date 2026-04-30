@@ -1,6 +1,8 @@
 package dao
 
 import domain.Candidato
+import repository.CandidatoRepository
+import repository.CompetenciaVinculoRepository
 import util.DataBaseConnection
 import java.sql.Connection
 import java.sql.PreparedStatement
@@ -8,12 +10,19 @@ import java.sql.ResultSet
 import java.sql.Statement
 import java.sql.Date
 
-class CandidatoDAO {
+class CandidatoDAO implements CandidatoRepository {
     private static final String TABELA_JUNCAO = "candidato_competencias"
     private static final String COLUNA_ENTIDADE = "candidato_id"
     private static final String COLUNA_COMPETENCIA = "competencias_id"
 
-    static List<Candidato> listarCandidatos() {
+    private final CompetenciaVinculoRepository competenciaVinculoRepository
+
+    CandidatoDAO(CompetenciaVinculoRepository competenciaVinculoRepository) {
+        this.competenciaVinculoRepository = competenciaVinculoRepository
+    }
+
+    @Override
+    List<Candidato> listarCandidatos() {
         String query = "SELECT * FROM candidatos"
         List<Candidato> candidatos = []
 
@@ -23,7 +32,7 @@ class CandidatoDAO {
 
             while (resultSet.next()) {
                 Candidato candidato = construirCandidatoDoResultSet(resultSet)
-                candidato.habilidades = CompetenciaDAO.buscarCompetenciasDe(candidato.id, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
+                candidato.habilidades = competenciaVinculoRepository.buscarCompetenciasDe(candidato.id, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
                 candidatos << candidato
             }
         } catch (Exception erro) {
@@ -32,8 +41,8 @@ class CandidatoDAO {
         return candidatos
     }
 
-    static void salvarCandidato(Candidato candidato) {
-        validarDadosDoCandidato(candidato)
+    @Override
+    void salvarCandidato(Candidato candidato) {
 
         String query = """
             INSERT INTO candidatos (nome, data_nascimento, email, cpf, pais, estado, cep, descricao)
@@ -44,7 +53,7 @@ class CandidatoDAO {
             int novoIdCandidato = inserirCandidato(query, candidato, conexao)
 
             if (novoIdCandidato > 0 && candidato.habilidades) {
-                CompetenciaDAO.vincularCompetencias(novoIdCandidato, candidato.habilidades, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
+                competenciaVinculoRepository.vincularCompetencias(novoIdCandidato, candidato.habilidades, TABELA_JUNCAO, COLUNA_ENTIDADE, COLUNA_COMPETENCIA, conexao)
             }
 
         } catch (Exception erro) {
@@ -70,18 +79,6 @@ class CandidatoDAO {
             }
         } catch (Exception erro) {
             throw new RuntimeException("Falha ao inserir candidato: ${erro}")
-        }
-    }
-
-    private static void validarDadosDoCandidato(Candidato candidato) {
-        if (!candidato.nome?.trim()) {
-            throw new IllegalArgumentException("Nome do candidato é obrigatório")
-        }
-        if (!candidato.cpf?.trim()) {
-            throw new IllegalArgumentException("CPF é obrigatório")
-        }
-        if (!candidato.dataNascimento) {
-            throw new IllegalArgumentException("Data de nascimento é obrigatória")
         }
     }
 

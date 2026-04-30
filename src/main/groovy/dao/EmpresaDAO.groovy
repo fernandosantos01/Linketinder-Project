@@ -1,14 +1,16 @@
 package dao
 
 import domain.Empresa
+import repository.EmpresaRepository
 import util.DataBaseConnection
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
-class EmpresaDAO {
+class EmpresaDAO implements EmpresaRepository {
 
-    static List<Empresa> listarEmpresas() {
+    @Override
+    List<Empresa> listarEmpresas() {
         String query = "SELECT * FROM empresas"
         List<Empresa> empresas = []
 
@@ -25,9 +27,8 @@ class EmpresaDAO {
         return empresas
     }
 
-    static void salvarEmpresa(Empresa empresa) {
-        validarDadosDaEmpresa(empresa)
-
+    @Override
+    void salvarEmpresa(Empresa empresa) {
         String query = """
             INSERT INTO empresas (nome, cnpj, email, descricao, pais, estado, cep)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -44,15 +45,6 @@ class EmpresaDAO {
         }
     }
 
-    private static void validarDadosDaEmpresa(Empresa empresa) {
-        if (!empresa.nome?.trim()) {
-            throw new IllegalArgumentException("Nome da empresa é obrigatório")
-        }
-        if (!empresa.cnpj?.trim()) {
-            throw new IllegalArgumentException("CNPJ é obrigatório")
-        }
-    }
-
     private static void preencherParametrosEmpresa(PreparedStatement statement, Empresa empresa) {
         statement.setString(1, empresa.nome)
         statement.setString(2, empresa.cnpj)
@@ -65,14 +57,14 @@ class EmpresaDAO {
 
     private static Empresa construirEmpresaDoResultSet(ResultSet resultSet) {
         return new Empresa(
-            id: resultSet.getInt("id"),
-            nome: resultSet.getString("nome"),
-            cnpj: resultSet.getString("cnpj"),
-            email: resultSet.getString("email"),
-            descricao: resultSet.getString("descricao"),
-            pais: resultSet.getString("pais"),
-            estado: resultSet.getString("estado"),
-            cep: resultSet.getString("cep")
+                id: resultSet.getInt("id"),
+                nome: resultSet.getString("nome"),
+                cnpj: resultSet.getString("cnpj"),
+                email: resultSet.getString("email"),
+                descricao: resultSet.getString("descricao"),
+                pais: resultSet.getString("pais"),
+                estado: resultSet.getString("estado"),
+                cep: resultSet.getString("cep")
         )
     }
 }

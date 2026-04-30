@@ -2,6 +2,14 @@ import dao.*
 import domain.Candidato
 import domain.Empresa
 import domain.Vaga
+import repository.CandidatoRepository
+import repository.CompetenciaRepository
+import repository.EmpresaRepository
+import repository.VagaRepository
+import service.CandidatoService
+import service.CompetenciaService
+import service.EmpresaService
+import service.VagaService
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -9,12 +17,19 @@ import java.time.format.DateTimeFormatter
 class Linketinder {
     private static final DateTimeFormatter DATA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     private static final int OPCAO_SAIR = 0
-
-    private static EmpresaDAO empresaDAO = new EmpresaDAO()
-    private static CandidatoDAO candidatoDAO = new CandidatoDAO()
-    private static VagaDAO vagaDAO = new VagaDAO()
-    private static CompetenciaDAO competenciaDAO = new CompetenciaDAO()
     private static Scanner leitor = new Scanner(System.in)
+
+    private static final CompetenciaDAO competenciaDAO = new CompetenciaDAO()
+    private static final CandidatoRepository candidatoRepository = new CandidatoDAO(competenciaDAO)
+    private static final EmpresaRepository empresaRepository = new EmpresaDAO()
+    private static final VagaRepository vagaRepository = new VagaDAO(competenciaDAO)
+    private static final CompetenciaRepository competenciaRepository = competenciaDAO
+
+    private static final CandidatoService candidatoService = new CandidatoService(candidatoRepository)
+    private static final EmpresaService empresaService = new EmpresaService(empresaRepository)
+    private static final VagaService vagaService = new VagaService(vagaRepository)
+    private static final CompetenciaService competenciaService = new CompetenciaService(competenciaRepository)
+
 
     static void main(String[] args) {
         exibirMenuPrincipal()
@@ -89,7 +104,7 @@ class Linketinder {
 
     private static void listarEmpresas() {
         println "\n--- Empresas ---"
-        def empresas = empresaDAO.listarEmpresas()
+        def empresas = empresaService.listarEmpresas()
         if (empresas.isEmpty()) {
             println "Nenhuma empresa cadastrada."
             return
@@ -101,7 +116,7 @@ class Linketinder {
 
     private static void listarCandidatos() {
         println "\n--- Candidatos ---"
-        def candidatos = candidatoDAO.listarCandidatos()
+        def candidatos = candidatoService.listarCandidatos()
         if (candidatos.isEmpty()) {
             println "Nenhum candidato cadastrado."
             return
@@ -131,7 +146,8 @@ class Linketinder {
         novaEmpresa.estado = leitor.nextLine()
 
         try {
-            empresaDAO.salvarEmpresa(novaEmpresa)
+            empresaService.cadastrarEmpresas(novaEmpresa)
+            println "Empresa '${novaEmpresa.nome}' cadastrada com sucesso!"
         } catch (Exception erro) {
             println "Ainda não foi possível salvar a empresa: ${erro.message}"
         }
@@ -174,7 +190,8 @@ class Linketinder {
         novoCandidato.habilidades = leitor.nextLine().split(",").collect { it.trim() }
 
         try {
-            candidatoDAO.salvarCandidato(novoCandidato)
+            candidatoService.cadastrarCandidato(novoCandidato)
+            println "Candidato '${novoCandidato.nome}' cadastrado com sucesso!"
         } catch (Exception erro) {
             println "Ainda não foi possível salvar o candidato: ${erro.message}"
         }
@@ -182,7 +199,7 @@ class Linketinder {
 
     private static void publicarVaga() {
         println "\n--- Publicar Vaga ---"
-        def empresas = empresaDAO.listarEmpresas()
+        def empresas = empresaService.listarEmpresas()
 
         if (empresas.isEmpty()) {
             println "Cadastre uma empresa primeiro!"
@@ -207,6 +224,9 @@ class Linketinder {
         print "Título da Vaga: "
         novaVaga.nome = leitor.nextLine()
 
+        print "Regime de Trabalho: "
+        novaVaga.local = leitor.nextLine()
+
         print "Descrição: "
         novaVaga.descricao = leitor.nextLine()
 
@@ -214,7 +234,8 @@ class Linketinder {
         novaVaga.competencias = leitor.nextLine().split(",").collect { it.trim() }
 
         try {
-            vagaDAO.salvarVaga(novaVaga)
+            vagaService.salvarVaga(novaVaga)
+            println "Vaga '${novaVaga.nome}' publicada com sucesso!"
         } catch (Exception erro) {
             println "Ainda não foi possível salvar a vaga: ${erro.message}"
         }
@@ -222,7 +243,7 @@ class Linketinder {
 
     private static void listarVagas() {
         println "\n--- Vagas Disponíveis ---"
-        def vagas = vagaDAO.listarVagas()
+        def vagas = vagaService.listarVagas()
 
         if (vagas.isEmpty()) {
             println "Nenhuma vaga publicada."
@@ -230,7 +251,7 @@ class Linketinder {
         }
 
         vagas.each { vaga ->
-            println "Vaga: ${vaga.nome} | Requisitos: ${vaga.competencias.join(', ')}"
+            println "Vaga: ${vaga.nome} | Local: ${vaga.local} | Requisitos: ${vaga.competencias.join(', ')}"
         }
     }
 

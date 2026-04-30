@@ -16,12 +16,4 @@ class DataBaseConnection {
             throw new RuntimeException("Falha ao conectar ao banco de dados: ${sqlException.message}", sqlException)
         }
     }
-
-    static void closeConnection(Connection connection) {
-        if (connection != null) {
-            try {
-                connection.close()
-            } catch (SQLException ignored) {}
-        }
-    }
 }

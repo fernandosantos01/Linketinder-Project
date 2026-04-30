@@ -3,6 +3,7 @@ package domain
 import groovy.transform.ToString
 import java.time.LocalDate
 import java.time.Period
+import java.time.format.DateTimeFormatter
 
 @ToString(includeNames = true)
 class Candidato extends Pessoa {
@@ -23,7 +24,7 @@ class Candidato extends Pessoa {
         ID: {$id}
         CANDIDATO: $nome (${getIdade()} anos)
         Email: $email | CPF: $cpf
-        Data de Nascimento: ${dataNascimento?.format('dd/MM/yyyy') ?: 'Não informada'}
+        Data de Nascimento: ${dataNascimento?.format('dd/MM/yyyy' as DateTimeFormatter) ?: 'Não informada'}
         Local: $pais - $estado - CEP: $cep
         Competências: ${habilidades.join(', ') ?: 'Nenhuma'}
         Sobre: $descricao
