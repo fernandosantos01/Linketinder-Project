@@ -123,6 +123,18 @@ cd Linketinder-Project
 ```
 src/
 ├── main/groovy/
+│   ├── controller/
+│   │   ├── MenuController.groovy         # Loop do menu, delega para os controllers
+│   │   ├── CandidatoController.groovy    # Coordena CandidatoService + CandidatoView
+│   │   ├── EmpresaController.groovy      # Coordena EmpresaService + EmpresaView
+│   │   ├── VagaController.groovy         # Coordena VagaService + VagaView
+│   │   └── CompetenciaController.groovy  # Coordena CompetenciaService + CompetenciaView
+│   ├── view/
+│   │   ├── MenuView.groovy               # Exibe menu, lê opção do usuário
+│   │   ├── CandidatoView.groovy          # Exibe candidatos, lê input de candidato
+│   │   ├── EmpresaView.groovy            # Exibe empresas, lê input de empresa
+│   │   ├── VagaView.groovy               # Exibe vagas, lê input de vaga
+│   │   └── CompetenciaView.groovy        # Exibe competências
 │   ├── dao/
 │   │   ├── CandidatoDAO.groovy           # Persistência de candidatos
 │   │   ├── EmpresaDAO.groovy             # Persistência de empresas
@@ -149,7 +161,7 @@ src/
 │   │   ├── PostgresConnectionFactory.groovy  # Implementação PostgreSQL
 │   │   ├── H2TestConnectionFactory.groovy    # Implementação H2 (testes)
 │   │   └── DatabaseConnectionManager.groovy  # Singleton do gerenciador
-│   └── Linketinder.groovy                # Ponto de entrada — menu console
+│   └── Linketinder.groovy                # Ponto de entrada — raiz de composição
 └── test/groovy/
     └── service/
         ├── CandidatoServiceSpec.groovy
@@ -161,21 +173,106 @@ src/
 
 ## 🏛️ Arquitetura
 
-O projeto segue uma arquitetura em camadas com responsabilidades bem definidas:
+O projeto combina arquitetura em camadas com o padrão **MVC**, separando apresentação, controle e persistência em responsabilidades bem definidas:
 
 ```
-Main (Linketinder)
-     ↓
-  Services        ← regras de negócio e validação
-     ↓
- Repositories     ← interfaces (contratos)
-     ↓
-    DAOs           ← implementações de persistência
-     ↓
- PostgreSQL
+ ┌─────────────────────────────────────────┐
+ │                  VIEW                   │  ← exibe dados, lê input do usuário
+ │  MenuView  CandidatoView  EmpresaView   │
+ │  VagaView  CompetenciaView              │
+ └──────────────────┬──────────────────────┘
+                    │
+ ┌──────────────────▼──────────────────────┐
+ │               CONTROLLER                │  ← coordena View e Service
+ │  MenuController   CandidatoController   │
+ │  EmpresaController  VagaController      │
+ └──────────────────┬──────────────────────┘
+                    │
+ ┌──────────────────▼──────────────────────┐
+ │                SERVICE                  │  ← regras de negócio e validação
+ └──────────────────┬──────────────────────┘
+                    │
+ ┌──────────────────▼──────────────────────┐
+ │            REPOSITORY (interfaces)       │  ← contratos de persistência
+ └──────────────────┬──────────────────────┘
+                    │
+ ┌──────────────────▼──────────────────────┐
+ │                  DAO                    │  ← implementações de persistência
+ └──────────────────┬──────────────────────┘
+                    │
+               PostgreSQL
 ```
 
-**Cada camada só conhece a camada imediatamente abaixo dela através de interfaces** — nunca de implementações concretas. Isso é o que permite trocar o banco de dados ou criar implementações falsas para testes sem alterar nenhuma regra de negócio.
+**Cada camada depende apenas da camada imediatamente abaixo através de interfaces** — nunca de implementações concretas. O `Linketinder.groovy` atua exclusivamente como raiz de composição: instancia todos os objetos e conecta as dependências, sem conter nenhuma lógica de negócio ou apresentação.
+
+---
+
+## 🔄 Refatoração MVC
+
+### O problema antes da refatoração
+
+A classe `Linketinder.groovy` concentrava três responsabilidades distintas em um único arquivo com mais de 270 linhas:
+
+- **Apresentação** — todos os `println` de menus, listagens e mensagens de erro
+- **Leitura de input** — todo o `Scanner` e parsing de dados do usuário
+- **Orquestração** — o `switch` que decidia qual ação executar
+
+Isso violava diretamente o **Single Responsibility Principle** e tornava impossível testar ou reutilizar qualquer parte do código de interface sem arrastar toda a lógica junto.
+
+---
+
+### As correções realizadas
+
+**1. Extração da camada View**
+
+Todo código de apresentação e leitura de input foi movido para classes dedicadas em `view/`. Cada entidade ganhou sua própria View:
+
+| Antes (em `Linketinder.groovy`) | Depois |
+|---|---|
+| `println "\n--- Candidatos ---"` | `CandidatoView.exibirCandidatos()` |
+| `leitor.nextLine()` para ler campos | `CandidatoView.lerCandidato()` |
+| `println "Empresa cadastrada!"` | `EmpresaView.exibirSucesso()` |
+| `println "Opção inválida!"` | `MenuView.exibirOpcaoInvalida()` |
+
+As Views recebem o `Scanner` por injeção de construtor — um único `Scanner` é criado no `main()` e compartilhado, evitando múltiplas instâncias abertas para `System.in`.
+
+**2. Extração da camada Controller**
+
+A lógica de coordenação — receber o input da View, chamar o Service e devolver o resultado para a View — foi movida para controllers dedicados:
+
+```groovy
+// antes: tudo junto em Linketinder.groovy
+private static void cadastrarCandidato() {
+    // ler input (View)
+    // chamar service (Controller)
+    // exibir resultado (View)
+}
+
+// depois: responsabilidades separadas
+class CandidatoController {
+    void cadastrar() {
+        def candidato = view.lerCandidato()       // delega para View
+        service.cadastrarCandidato(candidato)      // delega para Service
+        view.exibirSucesso(candidato.nome)         // delega para View
+    }
+}
+```
+
+**3. Simplificação do `Linketinder.groovy`**
+
+O arquivo principal passou de 270 linhas para menos de 45, contendo apenas a instanciação e conexão das dependências — sem nenhum `println`, sem leitura de input, sem regra de negócio.
+
+---
+
+### Como a refatoração tornou o código melhor
+
+**Testabilidade:** cada View pode ser substituída por um mock nos testes. É possível testar um Controller passando uma View falsa que retorna dados fixos, sem precisar simular input do teclado.
+
+**Manutenibilidade:** mudar a forma como candidatos são exibidos significa alterar apenas `CandidatoView` — sem risco de quebrar a lógica de cadastro ou persistência.
+
+**Legibilidade:** `CandidatoController.cadastrar()` tem 5 linhas e descreve claramente o fluxo: ler → processar → exibir. Qualquer desenvolvedor entende o que acontece sem precisar rastrear o código de exibição misturado com o de negócio.
+
+**Extensibilidade:** adicionar uma nova tela (ex: tela de match entre candidato e vaga) significa criar um novo Controller e uma nova View, sem modificar nenhuma classe existente.
 
 ---
 
