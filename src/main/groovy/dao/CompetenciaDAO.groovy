@@ -2,19 +2,26 @@ package dao
 
 import repository.CompetenciaRepository
 import repository.CompetenciaVinculoRepository
-import util.DataBaseConnection
+import util.IConnectionFactory
+
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 import java.sql.Statement
 
 class CompetenciaDAO implements CompetenciaRepository, CompetenciaVinculoRepository {
+    private final IConnectionFactory connectionFactory;
+
+    CompetenciaDAO(IConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory
+    }
+
     @Override
     List<String> listarCompetencias() {
         List<String> lista = []
         String query = "SELECT nome FROM competencias ORDER BY nome ASC"
 
-        try (Connection conexao = DataBaseConnection.getConnection();
+        try (Connection conexao = connectionFactory.createConnection();
              PreparedStatement statement = conexao.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 

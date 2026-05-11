@@ -3,7 +3,8 @@ package dao
 import domain.Candidato
 import repository.CandidatoRepository
 import repository.CompetenciaVinculoRepository
-import util.DataBaseConnection
+import util.IConnectionFactory
+
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -16,9 +17,11 @@ class CandidatoDAO implements CandidatoRepository {
     private static final String COLUNA_COMPETENCIA = "competencias_id"
 
     private final CompetenciaVinculoRepository competenciaVinculoRepository
+    private final IConnectionFactory connectionFactory
 
-    CandidatoDAO(CompetenciaVinculoRepository competenciaVinculoRepository) {
+    CandidatoDAO(CompetenciaVinculoRepository competenciaVinculoRepository, IConnectionFactory connectionFactory) {
         this.competenciaVinculoRepository = competenciaVinculoRepository
+        this.connectionFactory = connectionFactory
     }
 
     @Override
@@ -26,7 +29,7 @@ class CandidatoDAO implements CandidatoRepository {
         String query = "SELECT * FROM candidatos"
         List<Candidato> candidatos = []
 
-        try (Connection conexao = DataBaseConnection.getConnection();
+        try (Connection conexao = connectionFactory.createConnection();
              PreparedStatement statement = conexao.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
@@ -49,7 +52,7 @@ class CandidatoDAO implements CandidatoRepository {
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """
 
-        try (Connection conexao = DataBaseConnection.getConnection()) {
+        try (Connection conexao = connectionFactory.createConnection()) {
             int novoIdCandidato = inserirCandidato(query, candidato, conexao)
 
             if (novoIdCandidato > 0 && candidato.habilidades) {

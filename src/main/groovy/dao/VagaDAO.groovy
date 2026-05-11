@@ -3,7 +3,9 @@ package dao
 import domain.Vaga
 import repository.CompetenciaVinculoRepository
 import repository.VagaRepository
-import util.DataBaseConnection
+
+import util.IConnectionFactory
+
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
@@ -15,9 +17,11 @@ class VagaDAO implements VagaRepository {
     private static final String COLUNA_COMPETENCIA = "competencia_id"
 
     private final CompetenciaVinculoRepository competenciaVinculoRepository
+    private final IConnectionFactory connectionFactory
 
-    VagaDAO(CompetenciaVinculoRepository competenciaVinculoRepository) {
+    VagaDAO(CompetenciaVinculoRepository competenciaVinculoRepository, IConnectionFactory connectionFactory) {
         this.competenciaVinculoRepository = competenciaVinculoRepository
+        this.connectionFactory = connectionFactory
     }
 
     @Override
@@ -25,7 +29,7 @@ class VagaDAO implements VagaRepository {
         String query = "SELECT * FROM vagas"
         List<Vaga> vagas = []
 
-        try (Connection conexao = DataBaseConnection.getConnection();
+        try (Connection conexao = connectionFactory.createConnection();
              PreparedStatement statement = conexao.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
@@ -45,7 +49,7 @@ class VagaDAO implements VagaRepository {
 
         String query = "INSERT INTO vagas (nome, descricao, local, empresa_id) VALUES (?, ?, ?, ?)"
 
-        try (Connection conexao = DataBaseConnection.getConnection()) {
+        try (Connection conexao = connectionFactory.createConnection()) {
             int novoIdVaga = inserirVaga(query, vaga, conexao)
 
             if (novoIdVaga > 0 && vaga.competencias) {

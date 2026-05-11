@@ -124,14 +124,14 @@ cd Linketinder-Project
 src/
 ├── main/groovy/
 │   ├── dao/
-│   │   ├── CandidatoDAO.groovy       # Persistência de candidatos
-│   │   ├── EmpresaDAO.groovy         # Persistência de empresas
-│   │   ├── VagaDAO.groovy            # Persistência de vagas
-│   │   └── CompetenciaDAO.groovy     # Persistência e vínculo de competências
+│   │   ├── CandidatoDAO.groovy           # Persistência de candidatos
+│   │   ├── EmpresaDAO.groovy             # Persistência de empresas
+│   │   ├── VagaDAO.groovy                # Persistência de vagas
+│   │   └── CompetenciaDAO.groovy         # Persistência e vínculo de competências
 │   ├── domain/
-│   │   ├── Candidato.groovy          # Entidade candidato
-│   │   ├── Empresa.groovy            # Entidade empresa
-│   │   └── Vaga.groovy               # Entidade vaga
+│   │   ├── Candidato.groovy              # Entidade candidato
+│   │   ├── Empresa.groovy                # Entidade empresa
+│   │   └── Vaga.groovy                   # Entidade vaga
 │   ├── repository/
 │   │   ├── CandidatoRepository.groovy
 │   │   ├── EmpresaRepository.groovy
@@ -139,13 +139,17 @@ src/
 │   │   ├── CompetenciaRepository.groovy
 │   │   └── CompetenciaVinculoRepository.groovy
 │   ├── service/
-│   │   ├── CandidatoService.groovy   # Regras de negócio de candidatos
-│   │   ├── EmpresaService.groovy     # Regras de negócio de empresas
-│   │   ├── VagaService.groovy        # Regras de negócio de vagas
-│   │   └── CompetenciaService.groovy # Regras de negócio de competências
+│   │   ├── CandidatoService.groovy       # Regras de negócio de candidatos
+│   │   ├── EmpresaService.groovy         # Regras de negócio de empresas
+│   │   ├── VagaService.groovy            # Regras de negócio de vagas
+│   │   └── CompetenciaService.groovy     # Regras de negócio de competências
 │   ├── util/
-│   │   └── DataBaseConnection.groovy # Gerenciamento de conexão com o banco
-│   └── Linketinder.groovy            # Ponto de entrada — menu console
+│   │   ├── IConnectionFactory.groovy     # Contrato da fábrica de conexões
+│   │   ├── DatabaseFactory.groovy        # Fábrica — escolhe a implementação
+│   │   ├── PostgresConnectionFactory.groovy  # Implementação PostgreSQL
+│   │   ├── H2TestConnectionFactory.groovy    # Implementação H2 (testes)
+│   │   └── DatabaseConnectionManager.groovy  # Singleton do gerenciador
+│   └── Linketinder.groovy                # Ponto de entrada — menu console
 └── test/groovy/
     └── service/
         ├── CandidatoServiceSpec.groovy
@@ -172,6 +176,93 @@ Main (Linketinder)
 ```
 
 **Cada camada só conhece a camada imediatamente abaixo dela através de interfaces** — nunca de implementações concretas. Isso é o que permite trocar o banco de dados ou criar implementações falsas para testes sem alterar nenhuma regra de negócio.
+
+---
+
+## 🎨 Design Patterns
+
+O projeto aplica quatro padrões de projeto que trabalham em conjunto para reduzir acoplamento, facilitar testes e tornar a troca de banco de dados uma operação de uma linha.
+
+---
+
+### 1. Singleton — `DatabaseConnectionManager`
+
+**Categoria:** Criacional
+
+**O que faz:** Garante que exista **uma única instância** do gerenciador de conexões em toda a aplicação. O construtor é privado — ninguém pode criar uma segunda instância acidentalmente.
+
+```
+DatabaseConnectionManager
+  ├── construtor privado
+  ├── instancia (campo estático)
+  ├── inicializa(tipoDb)  → cria a instância uma única vez
+  └── getInstancia()      → retorna sempre a mesma instância
+```
+
+**Por que o código ficou melhor:** antes de qualquer padrão, cada DAO chamava `DataBaseConnection.getConnection()` diretamente — a decisão de qual banco usar estava implícita e espalhada. Com o Singleton, essa decisão é tomada **uma vez** no `main()` e todos os componentes acessam o mesmo gerenciador, sem risco de inconsistência.
+
+---
+
+### 2. Factory Method — `DatabaseFactory` + `IConnectionFactory`
+
+**Categoria:** Criacional
+
+**O que faz:** Centraliza a criação de conexões com o banco de dados. A interface `IConnectionFactory` define o contrato (`createConnection()`), e a `DatabaseFactory` decide qual implementação instanciar com base no tipo informado.
+
+```
+DatabaseFactory.getFactory("POSTGRES") → PostgresConnectionFactory
+DatabaseFactory.getFactory("TEST")     → H2TestConnectionFactory
+```
+
+**Por que o código ficou melhor:** os DAOs não sabem mais qual banco estão usando — eles recebem um `IConnectionFactory` e chamam `createConnection()`. Trocar de PostgreSQL para MySQL exige criar uma nova classe e mudar uma string no `main()`. Nenhum DAO precisa ser tocado.
+
+---
+
+### 3. Repository — interfaces em `repository/`
+
+**Categoria:** Arquitetural (padrão DDD)
+
+**O que faz:** Cada entidade do domínio tem uma interface que define o contrato de persistência (`CandidatoRepository`, `EmpresaRepository`, `VagaRepository`). Os DAOs são as implementações concretas dessas interfaces.
+
+```
+CandidatoRepository (interface)
+  └── CandidatoDAO (implementação PostgreSQL)
+  └── (qualquer outra implementação futura)
+```
+
+**Por que o código ficou melhor:** os Services dependem apenas das interfaces, nunca dos DAOs diretamente. Isso é o que permite os testes unitários usarem mocks do Spock sem banco de dados — o `CandidatoService` não consegue distinguir se está falando com um `CandidatoDAO` real ou com um mock.
+
+---
+
+### 4. Dependency Injection — construtores dos Services e DAOs
+
+**Categoria:** Comportamental / princípio SOLID (Inversão de Dependência)
+
+**O que faz:** Nenhuma classe instancia suas próprias dependências. Elas são recebidas pelo construtor. A única classe que cria objetos concretos é o `Linketinder.groovy`, que funciona como a **raiz de composição** do sistema.
+
+```groovy
+// Linketinder.groovy — único lugar com `new` de concretos
+IConnectionFactory factory   = DatabaseConnectionManager.getInstancia().getFactory()
+CompetenciaDAO competenciaDAO = new CompetenciaDAO(factory)
+CandidatoRepository candidatoRepo = new CandidatoDAO(competenciaDAO, factory)
+CandidatoService candidatoService = new CandidatoService(candidatoRepo)
+```
+
+**Por que o código ficou melhor:** `CandidatoService` não sabe que existe um PostgreSQL. `CandidatoDAO` não sabe que existe um `PostgresConnectionFactory`. Cada camada depende apenas do contrato (interface) da camada abaixo, tornando cada peça substituível e testável de forma independente.
+
+---
+
+### Como os quatro padrões se conectam
+
+```
+main() inicializa o Singleton (DatabaseConnectionManager)
+  └── Singleton usa o Factory para criar IConnectionFactory
+        └── IConnectionFactory é injetada nos DAOs (Dependency Injection)
+              └── DAOs implementam interfaces do Repository
+                    └── Services recebem essas interfaces (Dependency Injection)
+```
+
+O resultado é uma arquitetura onde **nenhuma camada está acoplada à implementação da camada abaixo** — apenas ao seu contrato.
 
 ---
 
@@ -211,8 +302,9 @@ As interfaces são enxutas e específicas. `CompetenciaRepository` expõe apenas
 Services dependem de interfaces, nunca de classes concretas. As dependências são injetadas pelo construtor. A única instanciação de classes concretas acontece no `Linketinder.groovy` (Main), que atua como a raiz de composição do sistema:
 
 ```groovy
-CompetenciaDAO competenciaDAO   = new CompetenciaDAO()
-CandidatoRepository candidatoRepo = new CandidatoDAO(competenciaDAO)
+IConnectionFactory factory        = DatabaseConnectionManager.getInstancia().getFactory()
+CompetenciaDAO competenciaDAO     = new CompetenciaDAO(factory)
+CandidatoRepository candidatoRepo = new CandidatoDAO(competenciaDAO, factory)
 CandidatoService candidatoService = new CandidatoService(candidatoRepo)
 ```
 

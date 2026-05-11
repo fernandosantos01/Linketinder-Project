@@ -3,13 +3,13 @@ import domain.Candidato
 import domain.Empresa
 import domain.Vaga
 import repository.CandidatoRepository
-import repository.CompetenciaRepository
 import repository.EmpresaRepository
 import repository.VagaRepository
 import service.CandidatoService
-import service.CompetenciaService
 import service.EmpresaService
 import service.VagaService
+import util.DatabaseConnectionManager
+import util.IConnectionFactory
 
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -18,20 +18,27 @@ class Linketinder {
     private static final DateTimeFormatter DATA_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy")
     private static final int OPCAO_SAIR = 0
     private static Scanner leitor = new Scanner(System.in)
-
-    private static final CompetenciaDAO competenciaDAO = new CompetenciaDAO()
-    private static final CandidatoRepository candidatoRepository = new CandidatoDAO(competenciaDAO)
-    private static final EmpresaRepository empresaRepository = new EmpresaDAO()
-    private static final VagaRepository vagaRepository = new VagaDAO(competenciaDAO)
-    private static final CompetenciaRepository competenciaRepository = competenciaDAO
-
-    private static final CandidatoService candidatoService = new CandidatoService(candidatoRepository)
-    private static final EmpresaService empresaService = new EmpresaService(empresaRepository)
-    private static final VagaService vagaService = new VagaService(vagaRepository)
-    private static final CompetenciaService competenciaService = new CompetenciaService(competenciaRepository)
+    private static IConnectionFactory factory
+    private static CompetenciaDAO competenciaDAO
+    private static CandidatoRepository candidatoRepository
+    private static EmpresaRepository empresaRepository
+    private static VagaRepository vagaRepository
+    private static CandidatoService candidatoService
+    private static EmpresaService empresaService
+    private static VagaService vagaService
 
 
     static void main(String[] args) {
+        DatabaseConnectionManager.inicializa("POSTGRES")
+        factory = DatabaseConnectionManager.getInstancia().getFactory()
+        competenciaDAO = new CompetenciaDAO(factory)
+        candidatoRepository = new CandidatoDAO(competenciaDAO, factory)
+        empresaRepository = new EmpresaDAO(factory)
+        vagaRepository = new VagaDAO(competenciaDAO, factory)
+        candidatoService = new CandidatoService(candidatoRepository)
+        empresaService = new EmpresaService(empresaRepository)
+        vagaService = new VagaService(vagaRepository)
+
         exibirMenuPrincipal()
     }
 

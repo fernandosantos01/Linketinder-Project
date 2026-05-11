@@ -2,19 +2,25 @@ package dao
 
 import domain.Empresa
 import repository.EmpresaRepository
-import util.DataBaseConnection
+import util.IConnectionFactory
+
 import java.sql.Connection
 import java.sql.PreparedStatement
 import java.sql.ResultSet
 
 class EmpresaDAO implements EmpresaRepository {
+    private final IConnectionFactory connectionFactory
+
+    EmpresaDAO(IConnectionFactory connectionFactory) {
+        this.connectionFactory = connectionFactory
+    }
 
     @Override
     List<Empresa> listarEmpresas() {
         String query = "SELECT * FROM empresas"
         List<Empresa> empresas = []
 
-        try (Connection conexao = DataBaseConnection.getConnection();
+        try (Connection conexao = connectionFactory.createConnection();
              PreparedStatement statement = conexao.prepareStatement(query);
              ResultSet resultSet = statement.executeQuery()) {
 
@@ -34,7 +40,7 @@ class EmpresaDAO implements EmpresaRepository {
             VALUES (?, ?, ?, ?, ?, ?, ?)
         """
 
-        try (Connection conexao = DataBaseConnection.getConnection();
+        try (Connection conexao = connectionFactory.createConnection();
              PreparedStatement statement = conexao.prepareStatement(query)) {
 
             preencherParametrosEmpresa(statement, empresa)
