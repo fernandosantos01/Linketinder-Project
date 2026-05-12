@@ -1,0 +1,37 @@
+Hora de praticar um pouco mais com o ZG-HERO Project da trilha (K2-T6): REST/RESTFUL API,
+
+A ideia desse projeto é bem direta, você vai criar 3 endpoints no backend do linketinder seguindo os princípios de APIs REST sem utilizar frameworks (não é necessário integração com o frontend).
+
+Ao longo da trilha, foram estudados os tópicos referentes as APIs REST e RESTful. REST é um padrão arquitetural para comunicação entre serviços e pode utilizar JSON, XML ou Plain Text. O RESTful consiste em se seguir a risca os critérios de boas práticas, por exemplo, utilizar os verbos HTTP adequadamente e seguir a lógica de cliente/servidor.
+
+O Linketinder já tem algumas operações que podem ser realizadas por seus usuários, tais como cadastro, listagem de vagas e inserção de competências. Julgue cada uma das funcionalidades do linketinder de modo a perceber qual delas irá estabelecer um fluxo de comunicação cliente (frontend)/servidor (backend), isto é, buscar ou enviar dados para o servidor de modo a realizar as operações selecionadas. Considere o Caso de uso 1, agora baseado em APIs REST:
+
+Caso 1:   O mirabolante Sandubinha, decide realizar seu cadastro na plataforma Linketinder. Para tanto, ele acessa a home page e em seguida seleciona a opção de cadastro. Sandubinha insere seus dados no formulário e os submete. Uma vez cadastrado, o Sandubinha insere suas competências e prossegue para a visualização de vagas.
+O Caso 1, expressa o fluxo simples de cadastro no Linketinder. Considerando a comunicação cliente/servidor via API REST, o que ocorre no sistema é o seguinte:
+
+Sandubinha submete dados do cadastro:
+Frontend: a função de "cadastrar candidato", coleta os dados do formulário, encapsula em um objeto "candidato" e envia, por meio da requisição POST, para o backend, no endpoint de cadastro de candidato, os dados de inserção do novo candidato (Sandubinha);
+Backend: O "controller de cadastro de candidatos" no backend, recebe a requisição e comunicada com a Model de candidato para que os dados sejam inseridos no BD, uma vez feito isso ele retorna a resposta de Created (201).
+Sandubinha insere suas competências:
+Frontend: a função "mostrar competências" realiza uma requisição "GET host:xx/competências/" no backend e mostra uma lista de competências já existentes. Na tela existe, também, o campo para inserir as competências manualmente. A função de "inserir competências", coleta os dados inseridos pelo Sandubinha e realiza uma requisição do tipo POST para o banckend (POST host:xx/competencias/), enviando, em JSON, os dados do Sadubinha e as competências que ele selecionou;
+Backend: O controller de "inserção de competências" no backend, recebe a requisição e comunicada com a Model de competências para que os dados sejam inseridos no BD. As competências são relacionadas ao usuário. Uma vez feito isso, ele retorna a resposta de Created (201).
+As descrições acima, deram um exemplo de como funcionaria a conexão entre o frontend e o backend do linketinder via API REST. Para esse projeto, apenas os endpoints no backend serão implementados, esse exemplo serve para direcionar a linha de raciocínio na projeção dos endpoints.
+
+Dicas/Recomendações:
+
+Como foi percebido ao longo da trilha, o padrão REST não está preso a nenhum framework ou linguagem, consiste apenas em práticas padronizadas baseadas no protocolo HTTP. Sendo assim, é possível implementar APIs REST de forma independente;
+Siga as boas práticas para gerar os endpoint. Antes de iniciar, você pode criar uma lista de endpoints, algo como uma pseudo documentação/contrato, para ficar claro quais serviços serão mapeados e de que forma;
+É possível implementar os endpoins utilizando Java e alguns recursos mais baixo nível:
+Um caminho, é utilizar o Apache Tomcat para subir um servidor com páginas e conteúdo dinâmico. Para criar os endpoints, pode ser utilizado Servlets, que tem recursos para mapear endpoints, tais como anotations, possibilitando que requisições sejam executadas conforme o cliente acione;
+É importante destacar que podem existir incompatibilidades entre o Tomcat e algumas libs, como o javax, então é recomendado utilizar a versão 8. No geral, são utilizados os pacotes javax ou jakarta para servlets, isso vai depender da versão do tomcat.
+Agora você está seguindo o padrão MVC, então mantenha separadas as responsabilidades, isso quer dizer, os endpoints no controller, os objetos de banco de dados na model e frontend na view. Você também pode optar por criar um package do tipo services, para desacoplar ainda mais a lógica do controller;
+
+
+Requisitos obrigatórios:
+
+Implementação dos endpoints no backend com API REST;
+Não utilizar frameworks tais como Spring, Grails ou Micronaut;
+Pelo menos operações de cadastro (Candidato e Empresa) e inserção de vagas mapeados em endpoints e com comunicação com a model para persistência dos dados;
+Requisitos opcionais:
+
+Não existem muitos materiais claros/ordenados ou atualizados de como criar endpoints sem utilizar frameworks, especialmente com recursos tais como Tomcat e Servlet. Desse modo, é interessante que você crie um breve tutorial no readme com a explicação de quais foram os recursos que você utilizou, configurações, sua estratégia e os passos seguidos, esse material vai agregar no seu portfólio e vai servir como fonte de consulta para você e outras pessoas que visitarem seu GitHub.

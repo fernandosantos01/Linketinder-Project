@@ -6,21 +6,23 @@
 
 ## 📋 Sobre o projeto
 
-O **Linketinder** é uma aplicação console desenvolvida em **Groovy** que permite o cadastro de candidatos, empresas e vagas de emprego, conectando perfis de candidatos às vagas com base em competências em comum.
+O **Linketinder** é uma plataforma desenvolvida em **Groovy** que permite o cadastro de candidatos, empresas e vagas de emprego, conectando perfis de candidatos às vagas com base em competências em comum.
 
-O projeto foi construído com foco em boas práticas de desenvolvimento, aplicando os princípios de **Clean Code** e o padrão **S.O.L.I.D** em toda a arquitetura.
+O projeto possui duas interfaces de uso: uma **aplicação console** e um **backend com API REST**, ambas compartilhando as mesmas camadas de Service, Repository e DAO. Foi construído com foco em boas práticas de desenvolvimento, aplicando os princípios de **Clean Code**, **S.O.L.I.D**, o padrão arquitetural **MVC** e **Design Patterns** (Singleton, Factory Method, Repository e Dependency Injection).
 
 ---
 
 ## 🚀 Tecnologias
 
-| Tecnologia       | Versão   | Uso                              |
-|------------------|----------|----------------------------------|
-| Groovy           | 4.x      | Linguagem principal              |
-| Java             | 17+      | Plataforma de execução           |
-| PostgreSQL       | 15+      | Banco de dados relacional        |
-| Spock Framework  | 2.x      | Testes unitários                 |
-| Gradle           | 8.x      | Build e gerenciamento de deps    |
+| Tecnologia            | Versão   | Uso                                      |
+|-----------------------|----------|------------------------------------------|
+| Groovy                | 5.0.0    | Linguagem principal                      |
+| Java                  | 17+      | Plataforma de execução                   |
+| PostgreSQL            | 15+      | Banco de dados relacional                |
+| Apache Tomcat Embed   | 8.5.100  | Servidor HTTP embarcado para a API REST  |
+| Groovy JSON           | 5.0.0    | Serialização e parsing de JSON           |
+| Spock Framework       | 2.x      | Testes unitários                         |
+| Gradle                | 8.x      | Build e gerenciamento de dependências    |
 
 ---
 
@@ -103,16 +105,25 @@ export DB_PASSWORD=sua_senha
 
 ## ▶️ Como rodar
 
-Clone o repositório e execute:
+Clone o repositório:
 
 ```bash
 git clone https://github.com/fernandosantos01/Linketinder-Project.git
 cd Linketinder-Project
+```
 
-# Compilar e executar
+**Aplicação console:**
+```bash
 ./gradlew run
+```
 
-# Rodar os testes
+**Servidor REST (API na porta 8080):**
+```bash
+./gradlew runServer
+```
+
+**Testes unitários:**
+```bash
 ./gradlew test
 ```
 
@@ -404,6 +415,133 @@ CompetenciaDAO competenciaDAO     = new CompetenciaDAO(factory)
 CandidatoRepository candidatoRepo = new CandidatoDAO(competenciaDAO, factory)
 CandidatoService candidatoService = new CandidatoService(candidatoRepo)
 ```
+
+---
+
+## 🌐 API REST
+
+### Estratégia e recursos utilizados
+
+A API REST foi implementada **sem nenhum framework** (sem Spring, Grails ou Micronaut), utilizando apenas recursos do ecossistema Java/Groovy de mais baixo nível:
+
+**Apache Tomcat Embed (`8.5.100`)** — servidor HTTP embarcado. Em vez de fazer o deploy de um arquivo `.war` em um Tomcat externo, o Tomcat é instanciado diretamente no código como uma biblioteca, iniciado programaticamente e encerrado com o processo. Isso elimina a necessidade de qualquer configuração de servidor externo.
+
+**Java Servlets (`javax.servlet`)** — cada endpoint é uma classe que estende `HttpServlet`. Os métodos `doGet` e `doPost` são sobrescritos para tratar as requisições HTTP correspondentes. A versão 8.5 do Tomcat utiliza o pacote `javax.servlet` (versões 10+ migram para `jakarta.servlet`).
+
+**Groovy JSON (`groovy-json`)** — biblioteca já presente no projeto, usada para:
+- `JsonSlurper` — faz o parsing do corpo da requisição (JSON → objeto Groovy)
+- `JsonOutput` — serializa os dados da resposta (objeto Groovy → JSON)
+
+---
+
+### Configuração
+
+A dependência foi adicionada ao `build.gradle`:
+
+```groovy
+implementation 'org.apache.tomcat.embed:tomcat-embed-core:8.5.100'
+```
+
+Uma task Gradle foi criada para iniciar o servidor separadamente da aplicação console:
+
+```groovy
+task runServer(type: JavaExec) {
+    group = 'application'
+    description = 'Inicia o servidor REST do Linketinder na porta 8080'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'LinketinderServer'
+}
+```
+
+O Tomcat é configurado e iniciado em `LinketinderServer.groovy`:
+
+```groovy
+Tomcat tomcat = new Tomcat()
+tomcat.setPort(8080)
+tomcat.getConnector()  // força a criação do conector HTTP
+
+Context ctx = tomcat.addContext("", docBase)
+
+Tomcat.addServlet(ctx, "candidatoServlet", new CandidatoServlet(candidatoService))
+ctx.addServletMappingDecoded("/candidatos", "candidatoServlet")
+// ... demais servlets
+
+tomcat.start()
+tomcat.getServer().await()  // mantém o processo vivo
+```
+
+Os Servlets recebem seus Services por injeção de construtor — a mesma camada de serviço usada pela aplicação console é reutilizada integralmente.
+
+---
+
+### Endpoints
+
+| Método | Endpoint        | Descrição                        | Status de sucesso |
+|--------|-----------------|----------------------------------|-------------------|
+| GET    | `/candidatos`   | Lista todos os candidatos        | 200 OK            |
+| POST   | `/candidatos`   | Cadastra um novo candidato       | 201 Created       |
+| GET    | `/empresas`     | Lista todas as empresas          | 200 OK            |
+| POST   | `/empresas`     | Cadastra uma nova empresa        | 201 Created       |
+| GET    | `/vagas`        | Lista todas as vagas             | 200 OK            |
+| POST   | `/vagas`        | Publica uma nova vaga            | 201 Created       |
+| GET    | `/competencias` | Lista todas as competências      | 200 OK            |
+
+---
+
+### Exemplos de requisição
+
+**POST /candidatos**
+```json
+{
+  "nome": "Sandubinha",
+  "cpf": "123.456.789-00",
+  "email": "sand@email.com",
+  "dataNascimento": "1990-05-15",
+  "estado": "SP",
+  "pais": "BRA",
+  "habilidades": ["Java", "Groovy", "SQL"]
+}
+```
+
+**POST /empresas**
+```json
+{
+  "nome": "Tech Ltda",
+  "cnpj": "12.345.678/0001-99",
+  "email": "contato@tech.com",
+  "descricao": "Empresa de tecnologia",
+  "estado": "SP"
+}
+```
+
+**POST /vagas**
+```json
+{
+  "nome": "Dev Backend",
+  "descricao": "Vaga para desenvolvedor backend",
+  "local": "Remoto",
+  "empresaId": 1,
+  "competencias": ["Java", "SQL"]
+}
+```
+
+---
+
+### MVC na API REST
+
+O padrão MVC é mantido na camada web:
+
+```
+Cliente (curl / frontend)
+        ↓ HTTP
+   Servlet (Controller)   ← recebe requisição, chama Service, retorna JSON
+        ↓
+   Service                ← regras de negócio e validação
+        ↓
+   Repository / DAO       ← persistência no PostgreSQL
+```
+
+Os Servlets não contêm lógica de negócio — apenas fazem o parsing do JSON de entrada, delegam para o Service e serializam a resposta. Erros de validação (`IllegalArgumentException`) retornam `400 Bad Request`; erros inesperados retornam `500 Internal Server Error`.
 
 ---
 

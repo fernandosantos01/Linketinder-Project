@@ -23,12 +23,20 @@ dependencies {
     implementation 'org.apache.groovy:groovy:5.0.0'
     implementation 'org.apache.groovy:groovy-json:5.0.0'
     implementation 'org.postgresql:postgresql:42.7.2'
+    implementation 'org.apache.tomcat.embed:tomcat-embed-core:8.5.100'
 
     testImplementation platform('org.spockframework:spock-bom:2.4-groovy-5.0')
     testImplementation 'org.spockframework:spock-core'
     testImplementation 'org.junit.platform:junit-platform-console-standalone:1.9.2'
     testImplementation 'net.bytebuddy:byte-buddy:1.14.10'
     testImplementation 'cglib:cglib-nodep:3.3.0'
+}
+
+task runServer(type: JavaExec) {
+    group = 'application'
+    description = 'Inicia o servidor REST do Linketinder na porta 8080'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'LinketinderServer'
 }
 test {
     useJUnitPlatform()
