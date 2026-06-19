@@ -42,63 +42,127 @@ O projeto possui duas interfaces de uso: uma **aplicação console** e um **back
 CREATE DATABASE db_linketinder;
 ```
 
-2. Execute o script de criação das tabelas:
+2. Execute os scripts na pasta `database/`:
 
-```sql
-CREATE TABLE candidatos (
-    id               SERIAL PRIMARY KEY,
-    nome             VARCHAR(100) NOT NULL,
-    data_nascimento  DATE         NOT NULL,
-    email            VARCHAR(100),
-    cpf              VARCHAR(14)  NOT NULL UNIQUE,
-    pais             VARCHAR(50),
-    estado           VARCHAR(2),
-    cep              VARCHAR(9),
-    descricao        TEXT
-);
-
-CREATE TABLE empresas (
-    id        SERIAL PRIMARY KEY,
-    nome      VARCHAR(100) NOT NULL,
-    cnpj      VARCHAR(18)  NOT NULL UNIQUE,
-    email     VARCHAR(100),
-    descricao TEXT,
-    pais      VARCHAR(50),
-    estado    VARCHAR(2),
-    cep       VARCHAR(9)
-);
-
-CREATE TABLE vagas (
-    id         SERIAL PRIMARY KEY,
-    nome       VARCHAR(100) NOT NULL,
-    descricao  TEXT,
-    local      VARCHAR(100),
-    empresa_id INTEGER REFERENCES empresas(id)
-);
-
-CREATE TABLE competencias (
-    id   SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL UNIQUE
-);
-
-CREATE TABLE candidato_competencias (
-    candidato_id   INTEGER REFERENCES candidatos(id),
-    competencias_id INTEGER REFERENCES competencias(id),
-    PRIMARY KEY (candidato_id, competencias_id)
-);
-
-CREATE TABLE vaga_competencias (
-    vaga_id       INTEGER REFERENCES vagas(id),
-    competencia_id INTEGER REFERENCES competencias(id),
-    PRIMARY KEY (vaga_id, competencia_id)
-);
+```bash
+psql -U seu_usuario -d db_linketinder -f database/schema.sql
+psql -U seu_usuario -d db_linketinder -f database/match_inserts.sql
 ```
+
+O `schema.sql` cria todas as tabelas (base + match). O `match_inserts.sql` popula o banco com dados de demonstração, incluindo matches confirmados.
 
 3. Configure as variáveis de ambiente para a conexão:
 
 ```bash
 export DB_USER=seu_usuario
 export DB_PASSWORD=sua_senha
+```
+
+---
+
+## 🤝 Lógica de Match
+
+### Como o match funciona
+
+O Linketinder implementa uma lógica de curtida bidirecional: o match só ocorre quando **candidato e empresa se curtem mutuamente**, independentemente da ordem.
+
+```
+Candidato curte vaga  →  persiste em curtidas_candidato
+Empresa curte candidato →  persiste em curtidas_empresa
+                           + rastreio no BD
+                           → se candidato curtiu vaga da empresa → MATCH
+                           → persiste em matches
+```
+
+O rastreio acontece sempre que uma **empresa curte um candidato**: o sistema consulta `curtidas_candidato` para verificar se aquele candidato já curtiu alguma vaga pertencente a essa empresa. Se sim, o match é registrado.
+
+O caminho inverso (candidato curte vaga depois de a empresa já tê-lo curtido) seguiria a mesma lógica: ao persistir a curtida do candidato, o sistema verifica se a empresa dona da vaga já curtiu esse candidato.
+
+---
+
+### Modelo de dados — tabelas de match
+
+```
+curtidas_candidato                curtidas_empresa
+──────────────────                ────────────────
+candidato_id  FK→candidatos       empresa_id    FK→empresas
+vaga_id       FK→vagas            candidato_id  FK→candidatos
+data_curtida  TIMESTAMP           data_curtida  TIMESTAMP
+PK (candidato_id, vaga_id)        PK (empresa_id, candidato_id)
+```
+
+```
+matches
+───────
+id           SERIAL PK
+candidato_id FK→candidatos
+empresa_id   FK→empresas
+vaga_id      FK→vagas       ← vaga que originou o match
+data_match   TIMESTAMP
+UNIQUE (candidato_id, empresa_id)
+```
+
+A `UNIQUE (candidato_id, empresa_id)` em `matches` garante que um par só tenha um match registrado, mesmo que o candidato tenha curtido múltiplas vagas da mesma empresa. O `vaga_id` preserva qual foi a vaga que disparou o evento.
+
+---
+
+### MER — Diagrama de Entidade-Relacionamento
+
+```
+candidatos ──< candidato_competencias >── competencias
+     │
+     ├──< curtidas_candidato >── vagas ──< vaga_competencias >── competencias
+     │                             │
+     │                          empresa_id
+     │                             │
+     └──< curtidas_empresa  ── empresas
+     │
+     └──< matches >── empresas
+                 └──> vagas
+```
+
+**Leitura:** um candidato pode curtir muitas vagas (`curtidas_candidato`); uma empresa pode curtir muitos candidatos (`curtidas_empresa`); quando há reciprocidade, um registro é criado em `matches` ligando candidato, empresa e a vaga de origem.
+
+---
+
+### Query de rastreio de match
+
+Executada quando uma empresa curte um candidato para verificar se há reciprocidade:
+
+```sql
+SELECT cc.candidato_id,
+       cc.vaga_id,
+       v.nome AS vaga_nome
+FROM curtidas_candidato cc
+JOIN vagas v ON v.id = cc.vaga_id
+WHERE cc.candidato_id = :candidato_id
+  AND v.empresa_id    = :empresa_id
+LIMIT 1;
+```
+
+Se retornar resultado, o match é registrado:
+
+```sql
+INSERT INTO matches (candidato_id, empresa_id, vaga_id)
+VALUES (:candidato_id, :empresa_id, :vaga_id_encontrado);
+```
+
+---
+
+### Listagem de matches
+
+```sql
+SELECT
+    m.id            AS match_id,
+    c.nome          AS candidato,
+    e.nome          AS empresa,
+    v.nome          AS vaga_origem,
+    m.data_match
+FROM matches m
+JOIN candidatos c ON c.id = m.candidato_id
+JOIN empresas   e ON e.id = m.empresa_id
+JOIN vagas      v ON v.id = m.vaga_id
+ORDER BY m.data_match;
 ```
 
 ---
@@ -132,6 +196,10 @@ cd Linketinder-Project
 ## 🗂️ Estrutura do projeto
 
 ```
+database/
+├── schema.sql          # Schema completo: tabelas base + tabelas de match
+└── match_inserts.sql   # Dados de demonstração com matches confirmados
+
 src/
 ├── main/groovy/
 │   ├── controller/
