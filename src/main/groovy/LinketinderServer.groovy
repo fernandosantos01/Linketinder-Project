@@ -3,6 +3,7 @@ import org.apache.catalina.Context
 import org.apache.catalina.startup.Tomcat
 import repository.CandidatoRepository
 import repository.CompetenciaRepository
+import repository.CurtidaRepository
 import repository.EmpresaRepository
 import repository.VagaRepository
 import service.*
@@ -22,12 +23,14 @@ class LinketinderServer {
         EmpresaRepository empresaRepo = new EmpresaDAO(factory)
         VagaRepository vagaRepo = new VagaDAO(competenciaDAO, factory)
         CompetenciaRepository competenciaRepo = competenciaDAO
+        CurtidaRepository curtidaRepo = new CurtidaDAO(factory)
 
         // Services
         CandidatoService candidatoService = new CandidatoService(candidatoRepo)
         EmpresaService empresaService = new EmpresaService(empresaRepo)
         VagaService vagaService = new VagaService(vagaRepo)
         CompetenciaService competenciaService = new CompetenciaService(competenciaRepo)
+        CurtidaService curtidaService = new CurtidaService(curtidaRepo)
 
         // Tomcat
         Tomcat tomcat = new Tomcat()
@@ -49,6 +52,9 @@ class LinketinderServer {
 
         Tomcat.addServlet(ctx, "competenciaServlet", new CompetenciaServlet(competenciaService))
         ctx.addServletMappingDecoded("/competencias", "competenciaServlet")
+
+        Tomcat.addServlet(ctx, "curtidaServlet", new CurtidaServlet(curtidaService))
+        ctx.addServletMappingDecoded("/curtidas/*", "curtidaServlet")
 
         tomcat.start()
         println "Linketinder API iniciada em http://localhost:8080"

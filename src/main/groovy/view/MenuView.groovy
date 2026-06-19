@@ -16,6 +16,8 @@ class MenuView {
         println "5. Publicar Vaga"
         println "6. Listar Vagas"
         println "7. Ver Competências do Sistema"
+        println "8. Candidato curte Vaga"
+        println "9. Empresa curte Candidato"
         println "0. Sair"
         print "Escolha: "
     }

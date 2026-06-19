@@ -10,19 +10,22 @@ class MenuController {
     private final EmpresaController empresaController
     private final VagaController vagaController
     private final CompetenciaController competenciaController
+    private final CurtidaController curtidaController
 
     MenuController(
             MenuView menuView,
             CandidatoController candidatoController,
             EmpresaController empresaController,
             VagaController vagaController,
-            CompetenciaController competenciaController
+            CompetenciaController competenciaController,
+            CurtidaController curtidaController
     ) {
         this.menuView = menuView
         this.candidatoController = candidatoController
         this.empresaController = empresaController
         this.vagaController = vagaController
         this.competenciaController = competenciaController
+        this.curtidaController = curtidaController
     }
 
     void iniciar() {
@@ -44,6 +47,8 @@ class MenuController {
             case 5: vagaController.publicar(); break
             case 6: vagaController.listar(); break
             case 7: competenciaController.listar(); break
+            case 8: curtidaController.candidatoCurteVaga(); break
+            case 9: curtidaController.empresaCurteCandidato(); break
             case OPCAO_SAIR: break
             default: menuView.exibirOpcaoInvalida()
         }
