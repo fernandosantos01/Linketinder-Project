@@ -17,16 +17,16 @@ class LinketinderServer {
         IConnectionFactory factory = DatabaseConnectionManager.getInstancia().getFactory()
 
         // DAOs
-        CompetenciaDAO competenciaDAO         = new CompetenciaDAO(factory)
-        CandidatoRepository candidatoRepo     = new CandidatoDAO(competenciaDAO, factory)
-        EmpresaRepository empresaRepo         = new EmpresaDAO(factory)
-        VagaRepository vagaRepo               = new VagaDAO(competenciaDAO, factory)
+        CompetenciaDAO competenciaDAO = new CompetenciaDAO(factory)
+        CandidatoRepository candidatoRepo = new CandidatoDAO(competenciaDAO, factory)
+        EmpresaRepository empresaRepo = new EmpresaDAO(factory)
+        VagaRepository vagaRepo = new VagaDAO(competenciaDAO, factory)
         CompetenciaRepository competenciaRepo = competenciaDAO
 
         // Services
-        CandidatoService candidatoService     = new CandidatoService(candidatoRepo)
-        EmpresaService empresaService         = new EmpresaService(empresaRepo)
-        VagaService vagaService               = new VagaService(vagaRepo)
+        CandidatoService candidatoService = new CandidatoService(candidatoRepo)
+        EmpresaService empresaService = new EmpresaService(empresaRepo)
+        VagaService vagaService = new VagaService(vagaRepo)
         CompetenciaService competenciaService = new CompetenciaService(competenciaRepo)
 
         // Tomcat

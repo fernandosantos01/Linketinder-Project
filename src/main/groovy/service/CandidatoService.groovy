@@ -14,7 +14,7 @@ class CandidatoService {
         return candidatoRepository.listarCandidatos()
     }
 
-    void cadastrarCandidato(Candidato candidato){
+    void cadastrarCandidato(Candidato candidato) {
         validarDadosDoCandidato(candidato)
         candidatoRepository.salvarCandidato(candidato)
     }
